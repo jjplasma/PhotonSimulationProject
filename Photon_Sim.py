@@ -6,24 +6,26 @@ class Simulation:
 
     def __init__(self, l, w, h, lp, wp, hp, n1, n2, detector, air_gap, phi_line,
                  theta_line, Xoy, Xoz):
-        self.l = l
-        self.w = w
-        self.h = h
-        self.lp = lp
-        self.wp = wp
-        self.hp = hp
-        self.n1 = n1
-        self.n2 = n2
-        self.detector = detector
-        self.air_gap = air_gap
+        self.l = l # scintillator length: x
+        self.w = w # scintillator width: y
+        self.h = h # scintillator height: z
+        self.lp = lp # ? length
+        self.wp = wp # ? width
+        self.hp = hp # ? height
+        self.n1 = n1 # scintillator index of refraction
+        self.n2 = n2 # air index of refraction
+        self.detector = detector # integer 0-5 indicating which face if scintillator attaches to SiPM
+        self.air_gap = air_gap # True if there is air between
         self.phi_line = phi_line
         self.theta_line = theta_line
-        self.Xoy = Xoy
-        self.Xoz = Xoz
-        self.theta_critical = (math.asin(n2 / n1))
+        self.Xoy = Xoy # displacement from center of scintillator?
+        self.Xoz = Xoz # displacement from center of scintillator?
+        self.theta_critical = (math.asin(n2 / n1)) # minimum angle for TIR
 
 
     def random_line(self):
+
+        # this seems to simulate random starting lines for a photon to initialize on rather than a path of an electron that this photons start at
 
         Tmin_x = -self.l / 2
         Tmax_x = self.l / 2
@@ -352,8 +354,8 @@ class Simulation:
 
 
 #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, detector, air_gap)
-sim = Simulation(30.0, 2.0, 3.0, 0.0, 2.0, 3.0, 1.9, 1.0, 1, False, math.pi/4, math.pi/4, 0, 0)
+sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, 1, False, math.pi/4, math.pi/4, 0, 0)
 
-#sim.run()
-#print(sim.path_length())
-print(sim.eff())
+sim.run()
+print(sim.path_length())
+print(f'{sim.eff()}% Efficiency')
