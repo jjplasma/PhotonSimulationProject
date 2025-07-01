@@ -357,5 +357,6 @@ class Simulation:
 sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, 1, False, math.pi/4, math.pi/4, 0, 0)
 
 sim.run()
-print(sim.path_length())
-print(f'{sim.eff()}% Efficiency')
+
+print(f'Efficiency: {sim.eff()}%')
+print(f'Path length: {sim.path_length()}')
