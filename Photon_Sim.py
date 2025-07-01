@@ -6,9 +6,9 @@ class Simulation:
 
     def __init__(self, l, w, h, lp, wp, hp, n1, n2, detector, air_gap, phi_line,
                  theta_line, Xoy, Xoz):
-        self.l = l # scintillator length: x
-        self.w = w # scintillator width: y
-        self.h = h # scintillator height: z
+        self.l = l # scintillator length: x 2?
+        self.w = w # scintillator width: y 30?
+        self.h = h # scintillator height: z 3?
         self.lp = lp # ? length
         self.wp = wp # ? width
         self.hp = hp # ? height
@@ -25,7 +25,7 @@ class Simulation:
 
     def random_line(self):
 
-        # this seems to simulate random starting lines for a photon to initialize on rather than a path of an electron that this photons start at
+        # this seems to simulate random starting lines for a photon to initialize on rather than a path of an electron that the photons start at
 
         Tmin_x = -self.l / 2
         Tmax_x = self.l / 2
