@@ -29,7 +29,7 @@ class Simulation:
         # this seems to simulate random starting lines for a photon to initialize on rather than a path of an electron that the photons start at
 
         Tmin_x = -self.l / 2
-        Tmax_x = self.l / 2
+        Tmax_x = self.l / 2 # x direction originally was longest direction, but was switched to beam direction since it works differently here and that's' the only direction that should work differently
         Tmin_y = ((-self.w / 2) - self.Xoy) / math.tan(self.phi_line)
         Tmax_y = ((self.w / 2) - self.Xoy) / math.tan(self.phi_line)
         Tmin_z = ((-self.h / 2) - self.Xoz) * math.tan(self.theta_line)
@@ -55,6 +55,7 @@ class Simulation:
     def photon(self, V, Ro, rec=0):
 
         if rec > 900:
+            print('Absorbed')
             return False
 
         for i in range(1):
@@ -69,8 +70,8 @@ class Simulation:
                 t = (x - Ro[i]) / V[i]
                 y = Ro[i+1] + V[i+1] * t
                 z = Ro[i+2] + V[i+2] * t
-                R = np.array([x, y, z])  #finds the coordinates where the photon hits the x = -l/2 plane
-            if (-self.l/2 <= R[i] <= self.l/2) and (-self.w/2 <= R[i+1] <= self.w/2) and (-self.h/2 <= R[i+2] <= self.h/2): #checks to see if any of those two points are within the boundaries of the box
+                R = np.array([x, y, z])  #f inds the coordinates where the photon hits the x = -l/2 plane
+            if (-self.l/2 <= R[i] <= self.l/2) and (-self.w/2 <= R[i+1] <= self.w/2) and (-self.h/2 <= R[i+2] <= self.h/2): # checks to see if any of those two points are within the boundaries of the box
                 theta_i = (math.acos(abs(V[i]) / math.sqrt(V[i] ** 2 + V[i+1] ** 2 + V[i+2] ** 2)))
                 if theta_i > self.theta_critical:
                     if self.air_gap:
@@ -297,13 +298,13 @@ class Simulation:
         total = self.iterations
         # self.random_line() # what does this return? commented out because I believe this does nothing
 
-        self.photon_pass_phi_0 = []
+        self.photon_pass_phi_0 = [] # List of
         self.photon_hit_phi_0 = []
         self.photon_pass_phi_pi = []
         self.photon_hit_phi_pi = []
 
         for n in range(total):
-            if self.random_line() == False:
+            if self.random_line() == False: # maybe checks if the displacement inputs create a line outside the scintillator?
                 break
             phi_initial =  random.choice([0, math.pi]) #random.uniform(0, 2 * math.pi)
             theta_initial = random.uniform(0, math.pi)  # math.acos(random.uniform(1., -1))   #(90) * math.pi/180
@@ -334,6 +335,11 @@ class Simulation:
 
         self.efficiency = (detected_photon * 100) / total
 
+        #print(self.photon_pass_phi_0)
+        #print(self.photon_hit_phi_0)
+        #print(self.photon_pass_phi_pi)
+        #print(self.photon_hit_phi_pi)
+
 
     def check(self):
         self.run()
@@ -362,4 +368,5 @@ sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, math.pi/4, math.pi/4)
 
 sim.run()
 print(f'Efficiency: {sim.eff()}%')
-print(f'Path length: {sim.path_length()}')
+print(f'Path length: {sim.length}')
+#print(f'Path length new: {sim.path_length()}') # currently unrelated to previous run
