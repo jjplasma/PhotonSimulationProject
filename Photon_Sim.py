@@ -4,8 +4,8 @@ import random
 
 class Simulation:
 
-    def __init__(self, l, w, h, lp, wp, hp, n1, n2, detector, air_gap, phi_line,
-                 theta_line, Xoy, Xoz):
+    def __init__(self, l, w, h, lp, wp, hp, n1, n2, phi_line,
+                 theta_line, detector=1, air_gap=False, Xoy=0, Xoz=0, iterations=1000):
         self.l = l # scintillator length: x 2?
         self.w = w # scintillator width: y 30?
         self.h = h # scintillator height: z 3?
@@ -21,6 +21,7 @@ class Simulation:
         self.Xoy = Xoy # displacement from center of scintillator?
         self.Xoz = Xoz # displacement from center of scintillator?
         self.theta_critical = (math.asin(n2 / n1)) # minimum angle for TIR
+        self.iterations = iterations
 
 
     def random_line(self):
@@ -290,8 +291,11 @@ class Simulation:
                                     return self.photon(V, Ro, rec+1)
 
     def run(self, detected_photon=0):
-        total = 1000
-        self.random_line()
+
+        # runs the simulation of default 1000 photons emitting in the scintillator
+
+        total = self.iterations
+        # self.random_line() # what does this return? commented out because I believe this does nothing
 
         self.photon_pass_phi_0 = []
         self.photon_hit_phi_0 = []
@@ -353,8 +357,8 @@ class Simulation:
 
 
 
-#sim = Simulation(l, w, h, lp, wp, hp, n1, n2, detector, air_gap)
-sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, 1, False, math.pi/4, math.pi/4, 0, 0)
+#sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
+sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, math.pi/4, math.pi/4)
 
 sim.run()
 print(f'Efficiency: {sim.eff()}%')
