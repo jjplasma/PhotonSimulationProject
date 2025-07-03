@@ -31,6 +31,7 @@ class Simulation:
 
         Tmin_x = -self.l / 2
         Tmax_x = self.l / 2 # x direction originally was longest direction, but was switched to beam direction since it works differently here and that's' the only direction that should work differently
+        #print(self.phi_line)
         Tmin_y = ((-self.w / 2) - self.Xoy) / math.tan(self.phi_line)
         Tmax_y = ((self.w / 2) - self.Xoy) / math.tan(self.phi_line)
         Tmin_z = ((-self.h / 2) - self.Xoz) * math.tan(self.theta_line)
@@ -51,6 +52,70 @@ class Simulation:
             else:
                 #print("T is not defined")
                 return False
+
+    def new_line(self, phi=None, theta=None):
+
+        # Adjustments to random_line
+
+        # Define boundaries of the scintillator based on its width and height
+        Tmin_x = -self.l / 2
+        Tmax_x = self.l / 2
+
+        # Initialize the boundaries for Y and Z
+        ymin = -self.w / 2
+        ymax = self.w / 2
+        zmin = -self.h / 2
+        zmax = self.h / 2
+
+        # Based on the angle of theta, determine the path potential in Z:
+        if self.theta_line == 0:  # Path is straight up in Z
+            Tmin_z = zmin
+            Tmax_z = zmax
+            Tmin_y = ymin  # Y does not travel; stays fixed
+            Tmax_y = ymax
+
+        elif self.theta_line == math.pi:  # Path is straight down in Z
+            Tmin_z = zmax  # We're taking the top boundary of Z
+            Tmax_z = zmin  # We're going down to the bottom boundary
+            Tmin_y = ymin
+            Tmax_y = ymax
+
+        else:  # For angles not strictly vertical
+            # Calculate Tmin and Tmax for Y based on the phi angle
+            if self.phi_line != 0:  # Avoid tangent if phi is 0
+                Tmin_y = ((-self.w / 2) - self.Xoy) / math.tan(self.phi_line)
+                Tmax_y = ((self.w / 2) - self.Xoy) / math.tan(self.phi_line)
+            else:  # If phi is directly 0, Y component does not change
+                Tmin_y = ymin
+                Tmax_y = ymax
+
+            # Z calculations now take into account the relationship to theta
+            Tmin_z = ((-self.h / 2) - self.Xoz) * math.tan(self.theta_line)
+            Tmax_z = ((self.h / 2) - self.Xoz) * math.tan(self.theta_line)
+
+        # Store all T values and sort them
+        self.Ts = [Tmin_x, Tmax_x, Tmin_y, Tmax_y, Tmin_z, Tmax_z]
+        self.Ts.sort()  # Ensure T values are ordered
+
+        # Initialize a validity flag
+        valid = False
+
+        # Check for valid indices for Y and Z
+        for i in range(len(self.Ts)):
+            # Check boundaries against scintillator dimensions appropriately
+            if (-self.l / 2 <= self.Ts[i] <= self.l / 2):
+                if i == 2 or i == 3:  # Only check Y boundaries
+                    # Calculate path length based on Y values
+                    self.length = min(Tmax_y, ymax) - max(Tmin_y, ymin)
+                    valid = True
+                    break
+                elif i == 4 or i == 5:  # Only check Z boundaries
+                    # Calculate Z length
+                    self.length = min(Tmax_z, zmax) - max(Tmin_z, zmin)
+                    valid = True
+                    break
+
+        return valid if valid else False
 
 
     def photon(self, V, Ro, rec=0):
@@ -315,6 +380,13 @@ class Simulation:
             V = np.array([Vx, Vy, Vz])
             # generates random direction (V) based on random thetas of phi and theta
 
+            # test code
+            #self.phi_line = phi_initial
+            #print(phi_initial)
+            #print(self.phi_line)
+            #self.theta_line = theta_initial
+            #self.random_line()
+
             self.T = random.uniform(self.Ts[2], self.Ts[3])
             Rox = self.T  # x(t)
             Roy = (self.T - self.Xoy) * math.tan(self.phi_line)  # y(t)
@@ -365,9 +437,10 @@ class Simulation:
 
 
 #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
-sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, math.pi/4, math.pi/4)
+sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, math.pi/4, math.pi/2)
 
 sim.run()
 print(f'Efficiency: {sim.eff()}%')
+#sim.new_line()
 print(f'Path length: {sim.length}')
 #print(f'Path length new: {sim.path_length()}') # currently unrelated to previous run
