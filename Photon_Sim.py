@@ -27,6 +27,7 @@ class Simulation:
     def random_line(self):
 
         # this seems to simulate random starting lines for a photon to initialize on rather than a path of an electron that the photons start at
+        # no randomness occurs within this method, rather it updates self.length to the most recent attribute values or returns false if they lead to an impossible path
 
         Tmin_x = -self.l / 2
         Tmax_x = self.l / 2 # x direction originally was longest direction, but was switched to beam direction since it works differently here and that's' the only direction that should work differently
@@ -296,12 +297,12 @@ class Simulation:
         # runs the simulation of default 1000 photons emitting in the scintillator
 
         total = self.iterations
-        # self.random_line() # what does this return? commented out because I believe this does nothing
+        # self.random_line() # what does this return? commented out because I believe this does nothing !update: this update self.length, but is redundant since it is called later
 
-        self.photon_pass_phi_0 = [] # List of
+        self.photon_pass_phi_0 = []
         self.photon_hit_phi_0 = []
         self.photon_pass_phi_pi = []
-        self.photon_hit_phi_pi = []
+        self.photon_hit_phi_pi = []#  Lists of angles photons travel at in certain conditions, unclear how this is used?
 
         for n in range(total):
             if self.random_line() == False: # maybe checks if the displacement inputs create a line outside the scintillator?
