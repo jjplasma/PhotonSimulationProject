@@ -120,12 +120,17 @@ class Simulation:
 
     def photon(self, V, Ro, rec=0):
 
+        # This method takes simulation inputs and photon position and velocity to recursively raytrace
+        # which wall it will hit and at what angle until it is reasonably absorbed or escapes, resulting in a False,
+        # or it is detected, resulting in a True
+        # It seems detector = 3 or 4 are correct for the current dimensionality inputs
+
         if rec > 900:
-            print('Absorbed')
+            #print('Absorbed')
             return False
 
-        for i in range(1):
-            if V[i] > 0.:
+        for i in range(1): # why are we looping once? seems to just set i = 0 but this could be done less confusingly
+            if V[i] > 0.: # i being 0 in this loop makes this section check the x component of V
                 x = self.l/2
                 t = (x - Ro[i]) / V[i]
                 y = Ro[i+1] + V[i+1] * t
@@ -136,7 +141,7 @@ class Simulation:
                 t = (x - Ro[i]) / V[i]
                 y = Ro[i+1] + V[i+1] * t
                 z = Ro[i+2] + V[i+2] * t
-                R = np.array([x, y, z])  #f inds the coordinates where the photon hits the x = -l/2 plane
+                R = np.array([x, y, z])  #finds the coordinates where the photon hits the x = -l/2 plane
             if (-self.l/2 <= R[i] <= self.l/2) and (-self.w/2 <= R[i+1] <= self.w/2) and (-self.h/2 <= R[i+2] <= self.h/2): # checks to see if any of those two points are within the boundaries of the box
                 theta_i = (math.acos(abs(V[i]) / math.sqrt(V[i] ** 2 + V[i+1] ** 2 + V[i+2] ** 2)))
                 if theta_i > self.theta_critical:
@@ -205,7 +210,7 @@ class Simulation:
                                     return self.photon(V, Ro, rec+1)
 
 
-        for i in range(1,2):
+        for i in range(1,2): # i being 1 in this loop makes this section check the y component of V
             if V[i] > 0.:
                 y = self.w/2
                 t = (y - Ro[i]) / V[i]
@@ -281,7 +286,7 @@ class Simulation:
                                     Ro = R
                                     return self.photon(V, Ro, rec+1)
 
-        for i in range(2,3):
+        for i in range(2,3): # i being 2 in this loop makes this section check the z component of V
             if V[i] > 0.:
                 z = self.h/2
                 t = (z - Ro[i]) / V[i]
@@ -424,7 +429,7 @@ class Simulation:
 
     def path_length(self):
         self.run()
-        if self.random_line() == False:
+        if not self.random_line():
             return 0
         else:
             #print(self.length)
@@ -437,10 +442,10 @@ class Simulation:
 
 
 #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
-sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, math.pi/4, math.pi/2)
+sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, math.pi/4, math.pi/2, detector=3)
 
 sim.run()
-print(f'Efficiency: {sim.eff()}%')
+print(f'Efficiency: {sim.efficiency}%')
 #sim.new_line()
 print(f'Path length: {sim.length}')
 #print(f'Path length new: {sim.path_length()}') # currently unrelated to previous run
