@@ -5,7 +5,7 @@ import random
 class Simulation:
 
     def __init__(self, l, w, h, lp, wp, hp, n1, n2, phi_line,
-                 theta_line, detector=1, air_gap=False, Xoy=0, Xoz=0, iterations=1000):
+                 theta_line, detector=3, air_gap=False, Xoy=0, Xoz=0, iterations=1000):
         self.l = l # scintillator length: x 2?
         self.w = w # scintillator width: y 30?
         self.h = h # scintillator height: z 3?
@@ -30,7 +30,7 @@ class Simulation:
         # no randomness occurs within this method, rather it updates self.length to the most recent attribute values or returns false if they lead to an impossible path
 
         Tmin_x = -self.l / 2
-        Tmax_x = self.l / 2 # x direction originally was longest direction, but was switched to beam direction since it works differently here and that's' the only direction that should work differently
+        Tmax_x = self.l / 2 # x direction originally was longest direction, but was switched to beam direction since it works differently here and that's the only direction that should work differently
         #print(self.phi_line)
         Tmin_y = ((-self.w / 2) - self.Xoy) / math.tan(self.phi_line)
         Tmax_y = ((self.w / 2) - self.Xoy) / math.tan(self.phi_line)
@@ -362,6 +362,96 @@ class Simulation:
                                     Ro = R
                                     return self.photon(V, Ro, rec+1)
 
+    def ray_trace(self, V, Ro, rec=0):
+
+        # This method takes simulation inputs and photon position and velocity NumPy Arrays to recursively raytrace
+        # which wall it will hit and at what angle until it is reasonably absorbed or escapes, resulting in a False,
+        # or it is detected, resulting in a True
+        # It seems detector = 3 or 4 are correct for the current dimensionality inputs
+
+        if rec > 900: # !rewrite later to take attenuation length into account
+            print('Absorbed')
+            return False
+
+        for i in range(3): # checks each wall of the scintillator until it finds the one that the photon will hit
+            # i equalling 0 in this loop makes this section check the x component of V, and so on.
+            if V[i] == 0:
+                continue
+
+            dims = [self.l, self.w, self.h]
+            R = np.zeros(3)
+            R[i] = math.copysign(dims[i]/2, V[i])
+            t = (R[i] - Ro[i]) / V[i]
+            R[(i+1) % 3] = Ro[(i+1) % 3] + V[(i+1) % 3] * t
+            R[(i+2) % 3] = Ro[(i+2) % 3] + V[(i+2) % 3] * t
+            #finds the coordinates where the photon hits the plane of each of the scintillators walls
+
+            if (np.abs(R[i]) <= dims[1]/2) and (np.abs(R[(i+1) % 3]) <= self.w/2) and (np.abs(R[(i+2) % 3]) <= self.h/2): # checks to see if any of those two points are within the boundaries of the box
+                theta_i = (math.acos(abs(V[i]) / math.sqrt(V[(i+1) % 3] ** 2 + V[i+1] ** 2 + V[(i+2) % 3] ** 2))) # extracts angle the photon intersects with the wall !last updated line
+                if theta_i > self.theta_critical: # avoids extra computation for case of TIR
+                    if self.air_gap: # !this airgap detection will need adjusting for new plastic light pipe case
+                        V[i] *= -1
+                        return self.photon(V, R, rec+1)
+                    if not(self.air_gap):
+                        if (-self.wp <= R[i+1] <= self.wp and -self.hp <= R[i+2] <= self.hp) and \
+                        ((self.detector == 1 and x == self.l / 2) or (self.detector == 2 and x == -self.l / 2)):
+                            return True
+                        else:
+                            V[i] *= -1
+                            Ro = R
+                            return self.photon(V, Ro, rec+1)
+                else:
+                    theta_t = math.asin(self.n1 * math.sin(theta_i))
+                    r_perp = (self.n1 * math.cos(theta_i) - self.n2 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n2 * math.cos(theta_t))
+                    r_para = (self.n1 * math.cos(theta_t) - self.n2 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n2 * math.cos(theta_i))
+                    r_ave = (abs(r_perp) + abs(r_para)) / 2
+                    Reflectance = (r_ave ** 2) * 100
+                    Transmittance = 100 - Reflectance
+                    select_path = random.uniform(0, 101)
+                    Min = min(Transmittance, Reflectance)
+                    if self.air_gap:
+                        if 0 <= select_path <= Min:
+                            if Min == Reflectance:
+                                V[i] *= -1
+                                Ro = R
+                                return self.photon(V, Ro, rec+1)
+                            if Min == Transmittance:
+                                if (-self.wp <= R[i + 1] <= self.wp and -self.hp <= R[i + 2] <= self.hp) and \
+                                ((self.detector == 1 and x == self.l / 2) or (self.detector == 2 and x == -self.l / 2)):
+                                    return True
+                                else:
+                                    return False
+                        else:
+                            if Min == Reflectance:
+                                if (-self.wp <= R[i + 1] <= self.wp and -self.hp <= R[i + 2] <= self.hp) and \
+                                ((self.detector == 1 and x == self.l / 2) or (self.detector == 2 and x == -self.l / 2)):
+                                    return True
+                                else:
+                                    return False
+                            if Min == Transmittance:
+                                V[i] *= -1
+                                Ro = R
+                                return self.photon(V, Ro, rec+1)
+                    if not self.air_gap:
+                        if (-self.wp <= R[i + 1] <= self.wp and -self.hp <= R[i + 2] <= self.hp) and \
+                        ((self.detector == 1 and x == self.l / 2) or (self.detector == 2 and x == -self.l / 2)):
+                            return True
+                        else:
+                            if 0 <= select_path <= Min:
+                                if Min == Reflectance:
+                                    V[i] *= -1
+                                    Ro = R
+                                    return self.photon(V, Ro, rec+1)
+                                if Min == Transmittance:
+                                    return False
+                            else:
+                                if Min == Reflectance:
+                                    return False
+                                if Min == Transmittance:
+                                    V[i] *= -1
+                                    Ro = R
+                                    return self.photon(V, Ro, rec+1)
+
     def run(self, detected_photon=0):
 
         # runs the simulation of default 1000 photons emitting in the scintillator
@@ -444,8 +534,15 @@ class Simulation:
 #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
 sim = Simulation(2.0, 30.0, 3.0, 0.0, 2.0, 3.0, 1.58, 1.0, math.pi/4, math.pi/2, detector=3)
 
-sim.run()
-print(f'Efficiency: {sim.efficiency}%')
+#sim.run()
+#print(f'Efficiency: {sim.efficiency}%')
 #sim.new_line()
-print(f'Path length: {sim.length}')
+#print(f'Path length: {sim.length}')
 #print(f'Path length new: {sim.path_length()}') # currently unrelated to previous run
+
+V = np.array([0, -1, 0])
+Ro = np.array([0, 0, 0])
+if sim.ray_trace(V, Ro):
+    print('Detected')
+else:
+    print('Lost')
