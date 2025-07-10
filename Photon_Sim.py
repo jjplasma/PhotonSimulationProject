@@ -375,7 +375,7 @@ class Simulation:
         # Detector = 2 (or 3) are correct for the current dimensionality inputs
 
         if rec > 900: # !rewrite later to take attenuation length into account
-            print('Absorbed')
+            #print('Absorbed')
             return False
 
         for i in range(3): # checks each wall of the scintillator until it finds the one that the photon will hit
