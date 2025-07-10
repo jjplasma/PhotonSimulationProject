@@ -25,6 +25,8 @@ class Simulation:
         self.theta_critical = (math.asin(n2 / n1)) # minimum angle for TIR
         self.iterations = iterations
         self.nplastic = nplastic
+        self.theta_pass = (math.asin(nplastic / n1))
+        #self.theta_detect = (math.asin(n3 / n1))
 
 
     def random_line(self):
@@ -392,7 +394,7 @@ class Simulation:
 
             if (np.abs(R[i]) <= dims[i]/2) and (np.abs(R[(i+1) % 3]) <= dims[(i+1) % 3]/2) and (np.abs(R[(i+2) % 3]) <= dims[(i+2) % 3]/2): # checks to see if any of those two points are within the boundaries of the box
                 theta_i = (math.acos(abs(V[i]) / math.sqrt(V[(i+1) % 3] ** 2 + V[i] ** 2 + V[(i+2) % 3] ** 2))) # extracts angle the photon intersects with the wall
-                print(theta_i)
+                # print(theta_i)
                 if theta_i > self.theta_critical: # avoids extra computation for case of TIR
                     # if self.air_gap: # !this airgap detection will need adjusting for new plastic light pipe case
                     #     V[i] *= -1
@@ -400,10 +402,11 @@ class Simulation:
                     if np.abs(R[(i+1) % 3]) <= window[(i+1) % 3]/2 and np.abs(R[(i+1) % 3]) <= window[(i+2) % 3]/2 and \
                     ((self.detector[i * 2] and R[i] == dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == -dims[i] / 2)): # checks that the photon could hit the detector at this intersection point
                         # Current assumption is that with the lower IOR difference between the SiPM and Scintillator, all photons will transmit
-                        print(f'if {theta_i} < 1.37')
+                        # print(f'if {theta_i} < 1.37')
+                        # print('detected! \n')
                         return True
                     else:
-                        print('TIR bounce')
+                        # print('TIR bounce')
                         V[i] *= -1
                         return self.ray_trace(V, R, rec+1)
                 else:
@@ -418,16 +421,30 @@ class Simulation:
 
                     if np.abs(R[(i+1) % 3]) <= window[(i+1) % 3]/2 and np.abs(R[(i+1) % 3]) <= window[(i+2) % 3]/2 and \
                     ((self.detector[i * 2] and R[i] == dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == -dims[i] / 2)): # checks that the photon could hit the detector at this intersection point
-                        print(rec)
+                        # print('detected! \n')
                         return True
                     if select_path <= Reflectance:
                         V[i] *= -1
-                        print('bounce')
+                        # print('bounce')
                         return self.ray_trace(V, R, rec + 1)
-                    print('escape')
+                    # print('escape')
                     return False
 
         raise Exception('Photon tunneled out of sim, look for bugs')
+
+    def random_test(self):
+
+        # generates self.iterations number of photons with random position and velocities withing the scintillator and returns the fraction that are detected
+
+        count = 0
+        dims = np.array([self.l, self.w, self.h])
+        for n in range(self.iterations):
+            Ro = np.random.uniform(low=-1.0, high=1.0, size=3) * dims / 2
+            Vo = np.random.uniform(low=-1.0, high=1.0, size=3)
+            if self.ray_trace(Vo, Ro):
+                count += 1
+        return count / self.iterations
+
 
     def run(self, detected_photon=0):
 
@@ -509,7 +526,7 @@ class Simulation:
 
 
 #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
-sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 3.0, 1.58, 1.0, 1.55,math.pi/4, math.pi/2, detector=2)
+sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 3.0, 1.58, 1.0, 1.55, math.pi/4, math.pi/2, detector=2)
 
 #sim.run()
 #print(f'Efficiency: {sim.efficiency}%')
@@ -517,10 +534,12 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 3.0, 1.58, 1.0, 1.55,math.pi/4, math
 #print(f'Path length: {sim.length}')
 #print(f'Path length new: {sim.path_length()}') # currently unrelated to previous run
 
-V = np.array([0, 1, 2]) #suspected bug with bounces on the top or bottom wall
-Ro = np.array([0, 0, 0])
-print(sim.theta_critical)
-if sim.ray_trace(V, Ro):
-    print('Detected')
-else:
-    print('Lost')
+# V = np.array([0, 1, 2]) #suspected bug with bounces on the top or bottom wall
+# Ro = np.array([0, 0, 0])
+# print(sim.theta_critical)
+# if sim.ray_trace(V, Ro):
+#     print('Detected')
+# else:
+#     print('Lost')
+
+print(f'Detected {sim.random_test() * 100}%')
