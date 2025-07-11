@@ -25,7 +25,7 @@ class Simulation:
         self.theta_critical = (math.asin(n2 / n1)) # minimum angle for TIR
         self.iterations = iterations
         self.nplastic = nplastic
-        self.theta_pass = (math.asin(nplastic / n1))
+        #self.theta_pass = (math.asin(nplastic / n1))
         #self.theta_detect = (math.asin(n3 / n1))
 
 
@@ -367,15 +367,15 @@ class Simulation:
                                     Ro = R
                                     return self.photon(V, Ro, rec+1)
 
-    def ray_trace(self, V, Ro, rec=0):
+    def ray_trace(self, V, Ro, rec=0, length=0):
 
         # This method takes simulation inputs and photon position and velocity NumPy Arrays to recursively raytrace
         # which wall it will hit and at what angle until it is reasonably absorbed or escapes, resulting in a False,
         # or it is detected, resulting in a True
         # Detector = 2 (or 3) are correct for the current dimensionality inputs
 
-        if rec > 900: # !rewrite later to take attenuation length into account
-            #print('Absorbed')
+        if length > 3800 or rec > 900: # !rewrite later to take attenuation length into account (attenuation length: 380 cm)
+            print(f'Absorbed in {rec}')
             return False
 
         for i in range(3): # checks each wall of the scintillator until it finds the one that the photon will hit
@@ -394,7 +394,9 @@ class Simulation:
 
             if (np.abs(R[i]) <= dims[i]/2) and (np.abs(R[(i+1) % 3]) <= dims[(i+1) % 3]/2) and (np.abs(R[(i+2) % 3]) <= dims[(i+2) % 3]/2): # checks to see if any of those two points are within the boundaries of the box
                 theta_i = (math.acos(abs(V[i]) / math.sqrt(V[(i+1) % 3] ** 2 + V[i] ** 2 + V[(i+2) % 3] ** 2))) # extracts angle the photon intersects with the wall
-                # print(theta_i)
+                #print(theta_i)
+                length += np.linalg.norm(R - Ro)
+                #print(length)
                 if theta_i > self.theta_critical: # avoids extra computation for case of TIR
                     # if self.air_gap: # !this airgap detection will need adjusting for new plastic light pipe case
                     #     V[i] *= -1
@@ -408,9 +410,9 @@ class Simulation:
                     else:
                         # print('TIR bounce')
                         V[i] *= -1
-                        return self.ray_trace(V, R, rec+1)
+                        return self.ray_trace(V, R, rec+1, length)
                 else:
-                    theta_t = math.asin(self.n1 * math.sin(theta_i)) # transmission angle
+                    theta_t = math.asin((self.n1 / self.n2) * math.sin(theta_i)) # transmission angle
                     r_perp = (self.n1 * math.cos(theta_i) - self.n2 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n2 * math.cos(theta_t))
                     r_para = (self.n1 * math.cos(theta_t) - self.n2 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n2 * math.cos(theta_i))
                     r_ave = (abs(r_perp) + abs(r_para)) / 2
@@ -426,11 +428,24 @@ class Simulation:
                     if select_path <= Reflectance:
                         V[i] *= -1
                         # print('bounce')
-                        return self.ray_trace(V, R, rec + 1)
+                        return self.ray_trace(V, R, rec + 1, length)
                     # print('escape')
                     return False
 
         raise Exception('Photon tunneled out of sim, look for bugs')
+
+    def random_three_vector(self):
+        # written by Majd Ghrear in a previous project to isotropically generate direction vectors
+        phi = np.random.uniform() * 2 * np.pi
+
+        costheta = 2.0 * np.random.uniform() - 1.0
+        theta = np.arccos(costheta)
+
+        x = np.sin(theta) * np.cos(phi)
+        y = np.sin(theta) * np.sin(phi)
+        z = np.cos(theta)
+
+        return np.array([x, y, z]), theta, phi
 
     def random_test(self):
 
@@ -439,11 +454,14 @@ class Simulation:
         count = 0
         dims = np.array([self.l, self.w, self.h])
         for n in range(self.iterations):
-            Ro = np.random.uniform(low=-1.0, high=1.0, size=3) * dims / 2
-            Vo = np.random.uniform(low=-1.0, high=1.0, size=3)
+            Ro = self.random_three_vector()[0] * dims / 2
+            Vo = self.random_three_vector()[0]
+            #Ro = np.random.uniform(low=-1.0, high=1.0, size=3) * dims / 2
+            #Vo = np.random.uniform(low=-1.0, high=1.0, size=3)
             if self.ray_trace(Vo, Ro):
                 count += 1
         return count / self.iterations
+
 
 
     def run(self, detected_photon=0):
@@ -526,7 +544,7 @@ class Simulation:
 
 
 #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
-sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 3.0, 1.58, 1.0, 1.55, math.pi/4, math.pi/2, detector=2)
+sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, math.pi/4, math.pi/2, detector=2)
 
 #sim.run()
 #print(f'Efficiency: {sim.efficiency}%')

@@ -12,10 +12,11 @@ def efficiency_histogram(n=1000):
         results[i] = sim.random_test()
         print(i)
     plt.hist(results, bins=20)
+    plt.title('Rate of Detection for Randomly Generated Photons')
     plt.xlabel('Fraction of Photons Detected')
     plt.ylabel('Instances')
-    plt.show()
     print(f'Median: {np.median(results)}')
-    print(f'Median: {np.mean(results)}')
+    print(f'Mean: {np.mean(results)}')
+    plt.show()
 
 efficiency_histogram()
