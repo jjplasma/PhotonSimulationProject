@@ -367,7 +367,7 @@ class Simulation:
                                     Ro = R
                                     return self.photon(V, Ro, rec+1)
 
-    def ray_trace(self, V, Ro, rec=0, length=0):
+    def ray_trace(self, V, Ro, rec=0, length=0, plastic_returns=False):
 
         # This method takes simulation inputs and photon position and velocity NumPy Arrays to recursively raytrace
         # which wall it will hit and at what angle until it is reasonably absorbed or escapes, resulting in a False,
@@ -376,7 +376,7 @@ class Simulation:
 
         if length > 3800 or rec > 900: # !rewrite later to take attenuation length into account (attenuation length: 380 cm)
             print(f'Absorbed in {rec}')
-            return False
+            return [False]
 
         for i in range(3): # checks each wall of the scintillator until it finds the one that the photon will hit
             # i equalling 0 in this loop makes this section check the x component of V, and so on.
@@ -406,7 +406,7 @@ class Simulation:
                         # Current assumption is that with the lower IOR difference between the SiPM and Scintillator, all photons will transmit
                         # print(f'if {theta_i} < 1.37')
                         # print('detected! \n')
-                        return True
+                        return [True]
                     else:
                         # print('TIR bounce')
                         V[i] *= -1
@@ -424,13 +424,16 @@ class Simulation:
                     if np.abs(R[(i+1) % 3]) <= window[(i+1) % 3]/2 and np.abs(R[(i+1) % 3]) <= window[(i+2) % 3]/2 and \
                     ((self.detector[i * 2] and R[i] == dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == -dims[i] / 2)): # checks that the photon could hit the detector at this intersection point
                         # print('detected! \n')
-                        return True
+                        if plastic_returns:
+                            # calculate new V
+                            return [True, R, V]
+                        return [True, R]
                     if select_path <= Reflectance:
                         V[i] *= -1
                         # print('bounce')
                         return self.ray_trace(V, R, rec + 1, length)
                     # print('escape')
-                    return False
+                    return [False]
 
         raise Exception('Photon tunneled out of sim, look for bugs')
 
@@ -447,7 +450,7 @@ class Simulation:
 
         return np.array([x, y, z]), theta, phi
 
-    def random_test(self):
+    def random_test(self, plastic=False):
 
         # generates self.iterations number of photons with random position and velocities withing the scintillator and returns the fraction that are detected
 
@@ -458,7 +461,11 @@ class Simulation:
             Vo = self.random_three_vector()[0]
             #Ro = np.random.uniform(low=-1.0, high=1.0, size=3) * dims / 2
             #Vo = np.random.uniform(low=-1.0, high=1.0, size=3)
-            if self.ray_trace(Vo, Ro):
+            detection = self.ray_trace(Vo, Ro)
+            if detection[0]:
+                if plastic:
+                    Ro = detection[1]
+
                 count += 1
         return count / self.iterations
 
