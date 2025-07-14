@@ -15,7 +15,8 @@ class Simulation:
         self.n1 = n1 # scintillator index of refraction
         self.n2 = n2 # air index of refraction
         self.n3 = n3 # SiPM index of refraction
-        self.detector = [False, False, False, False, False, False] # iterable boolean list indicating which face if scintillator attaches to SiPM
+        self.detector = [False, False, False, False, False, False] # iterable boolean list indicating which face of the
+        # scintillator attaches to the SiPM window
         self.detector[detector] = True
         self.air_gap = air_gap # True if there is air between
         self.phi_line = phi_line
@@ -26,7 +27,7 @@ class Simulation:
         self.iterations = iterations
         self.nplastic = nplastic
         #self.theta_pass = (math.asin(nplastic / n1))
-        #self.theta_detect = (math.asin(n3 / n1))
+        self.theta_detect = (math.asin(n3 / n1))
 
 
     def random_line(self):
@@ -367,15 +368,18 @@ class Simulation:
                                     Ro = R
                                     return self.photon(V, Ro, rec+1)
 
-    def ray_trace(self, V, Ro, rec=0, length=0, plastic_returns=False):
+    def ray_trace(self, V, Ro, rec=0, length=0):
 
         # This method takes simulation inputs and photon position and velocity NumPy Arrays to recursively raytrace
         # which wall it will hit and at what angle until it is reasonably absorbed or escapes, resulting in a False,
-        # or it is detected, resulting in a True
+        # or it is detected, resulting in a True.
+        # These are returned as the first element in a list so that more information can be returned if the photon
+        # must pass through multiple objects
         # Detector = 2 (or 3) are correct for the current dimensionality inputs
 
         if length > 3800 or rec > 900: # !rewrite later to take attenuation length into account (attenuation length: 380 cm)
-            print(f'Absorbed in {rec}')
+            #print(f'Absorbed in {rec}')
+            #print(length)
             return [False]
 
         for i in range(3): # checks each wall of the scintillator until it finds the one that the photon will hit
@@ -384,7 +388,7 @@ class Simulation:
                 continue
 
             dims = [self.l, self.w, self.h]
-            window = [self.lp, self.wp, self.hp]
+            window = [self.lp, self.wp, self.hp] # allows easier iterating across dimensions
             R = np.zeros(3)
             R[i] = math.copysign(dims[i]/2, V[i])
             t = (R[i] - Ro[i]) / V[i]
@@ -397,37 +401,38 @@ class Simulation:
                 #print(theta_i)
                 length += np.linalg.norm(R - Ro)
                 #print(length)
-                if theta_i > self.theta_critical: # avoids extra computation for case of TIR
-                    # if self.air_gap: # !this airgap detection will need adjusting for new plastic light pipe case
-                    #     V[i] *= -1
-                    #     return self.ray_trace(V, R, rec+1)
-                    if np.abs(R[(i+1) % 3]) <= window[(i+1) % 3]/2 and np.abs(R[(i+1) % 3]) <= window[(i+2) % 3]/2 and \
-                    ((self.detector[i * 2] and R[i] == dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == -dims[i] / 2)): # checks that the photon could hit the detector at this intersection point
-                        # Current assumption is that with the lower IOR difference between the SiPM and Scintillator, all photons will transmit
-                        # print(f'if {theta_i} < 1.37')
-                        # print('detected! \n')
-                        return [True]
-                    else:
-                        # print('TIR bounce')
+
+                if np.abs(R[(i + 1) % 3]) <= window[(i + 1) % 3] / 2 and np.abs(R[(i + 1) % 3]) <= window[(i + 2) % 3] / 2 and \
+                    ((self.detector[i * 2] and R[i] == dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == -dims[i] / 2)):  # checks that the photon could hit the detector at this intersection point
+                    if theta_i > self.theta_detect:
+                        return [False]
+                    theta_t = math.asin((self.n1 / self.n3) * math.sin(theta_i))  # transmission angle
+                    r_perp = (self.n1 * math.cos(theta_i) - self.n3 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n3 * math.cos(theta_t))
+                    r_para = (self.n1 * math.cos(theta_t) - self.n3 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n3 * math.cos(theta_i))  # Fresnel's equations
+                    r_ave = (abs(r_perp) + abs(r_para)) / 2
+                    Reflectance = (r_ave ** 2)  # calculates average reflectance regardless of polarization and converts into decimal chance of reflecting
+                    select_path = random.uniform(0, 1)
+                    if select_path <= Reflectance:
                         V[i] *= -1
-                        return self.ray_trace(V, R, rec+1, length)
+                        # print('rare bounce')
+                        return self.ray_trace(V, R, rec + 1, length)
+                    # calculate new V
+                    return [True, R, V]
+
+                if theta_i > self.theta_critical: # avoids extra computation for case of TIR
+
+                    # print('TIR bounce')
+                    V[i] *= -1
+                    return self.ray_trace(V, R, rec+1, length)
                 else:
                     theta_t = math.asin((self.n1 / self.n2) * math.sin(theta_i)) # transmission angle
                     r_perp = (self.n1 * math.cos(theta_i) - self.n2 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n2 * math.cos(theta_t))
-                    r_para = (self.n1 * math.cos(theta_t) - self.n2 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n2 * math.cos(theta_i))
+                    r_para = (self.n1 * math.cos(theta_t) - self.n2 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n2 * math.cos(theta_i)) # Fresnel's equations
                     r_ave = (abs(r_perp) + abs(r_para)) / 2
                     Reflectance = (r_ave ** 2) # calculates average reflectance regardless of polarization and converts into decimal chance of reflecting
                     #Transmittance = 100 - Reflectance
                     select_path = random.uniform(0, 1)
 
-
-                    if np.abs(R[(i+1) % 3]) <= window[(i+1) % 3]/2 and np.abs(R[(i+1) % 3]) <= window[(i+2) % 3]/2 and \
-                    ((self.detector[i * 2] and R[i] == dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == -dims[i] / 2)): # checks that the photon could hit the detector at this intersection point
-                        # print('detected! \n')
-                        if plastic_returns:
-                            # calculate new V
-                            return [True, R, V]
-                        return [True, R]
                     if select_path <= Reflectance:
                         V[i] *= -1
                         # print('bounce')
