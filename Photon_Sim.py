@@ -380,7 +380,7 @@ class Simulation:
         if length > 3800 or rec > 900: # !rewrite later to take attenuation length into account (attenuation length: 380 cm)
             #print(f'Absorbed in {rec}')
             #print(length)
-            return [False]
+            return [False, length, rec]
 
         for i in range(3): # checks each wall of the scintillator until it finds the one that the photon will hit
             # i equalling 0 in this loop makes this section check the x component of V, and so on.
@@ -405,7 +405,7 @@ class Simulation:
                 if np.abs(R[(i + 1) % 3]) <= window[(i + 1) % 3] / 2 and np.abs(R[(i + 1) % 3]) <= window[(i + 2) % 3] / 2 and \
                     ((self.detector[i * 2] and R[i] == dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == -dims[i] / 2)):  # checks that the photon could hit the detector at this intersection point
                     if theta_i > self.theta_detect:
-                        return [False]
+                        return [False, length, rec]
                     theta_t = math.asin((self.n1 / self.n3) * math.sin(theta_i))  # transmission angle
                     r_perp = (self.n1 * math.cos(theta_i) - self.n3 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n3 * math.cos(theta_t))
                     r_para = (self.n1 * math.cos(theta_t) - self.n3 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n3 * math.cos(theta_i))  # Fresnel's equations
@@ -417,7 +417,7 @@ class Simulation:
                         # print('rare bounce')
                         return self.ray_trace(V, R, rec + 1, length)
                     # calculate new V
-                    return [True, R, V]
+                    return [True, length, rec, R, V]
 
                 if theta_i > self.theta_critical: # avoids extra computation for case of TIR
 
@@ -438,7 +438,7 @@ class Simulation:
                         # print('bounce')
                         return self.ray_trace(V, R, rec + 1, length)
                     # print('escape')
-                    return [False]
+                    return [False, length, rec]
 
         raise Exception('Photon tunneled out of sim, look for bugs')
 
@@ -461,18 +461,20 @@ class Simulation:
 
         count = 0
         dims = np.array([self.l, self.w, self.h])
+        hits = []
+        misses = []
         for n in range(self.iterations):
             Ro = self.random_three_vector()[0] * dims / 2
             Vo = self.random_three_vector()[0]
-            #Ro = np.random.uniform(low=-1.0, high=1.0, size=3) * dims / 2
-            #Vo = np.random.uniform(low=-1.0, high=1.0, size=3)
             detection = self.ray_trace(Vo, Ro)
             if detection[0]:
                 if plastic:
                     Ro = detection[1]
-
+                hits.append(detection[1:3])
                 count += 1
-        return count / self.iterations
+            else:
+                misses.append(detection[1:3])
+        return count / self.iterations, np.array(hits), np.array(misses)
 
 
 
@@ -572,4 +574,4 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, math.pi/4, mat
 # else:
 #     print('Lost')
 
-print(f'Detected {sim.random_test() * 100}%')
+print(f'Detected {sim.random_test()[0] * 100}%')
