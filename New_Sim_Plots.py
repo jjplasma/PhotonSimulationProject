@@ -31,25 +31,46 @@ def absorption_histogram(n=1000):
     plt.ylabel('Instances')
     plt.yscale('log')
     plt.show()
-    plt.hist(hits[:, 1], bins=30)
-    plt.title('Number of Ray Trace Recursions Before Detection')
-    plt.xlabel('Number of Reflections')
-    plt.ylabel('Instances')
-    plt.yscale('log')
-    plt.show()
+    # plt.hist(hits[:, 1], bins=30)
+    # plt.title('Number of Ray Trace Recursions Before Detection')
+    # plt.xlabel('Number of Reflections')
+    # plt.ylabel('Instances')
+    # plt.yscale('log')
+    # plt.show()
     plt.hist(misses[:, 0], bins=30)
     plt.title('Lengths Photons Traveled Before \n Escape/Absorption/Geometric Impossibility')
     plt.xlabel('length (mm)')
     plt.ylabel('Instances')
     plt.yscale('log')
     plt.show()
-    plt.hist(misses[:, 1], bins=30)
-    plt.title('Number of Ray Trace Recursions Before \n Escape/Absorption/Geometric Impossibility')
-    plt.xlabel('Number of Reflections')
-    plt.ylabel('Instances')
-    plt.yscale('log')
+    # plt.hist(misses[:, 1], bins=30)
+    # plt.title('Number of Ray Trace Recursions Before \n Escape/Absorption/Geometric Impossibility')
+    # plt.xlabel('Number of Reflections')
+    # plt.ylabel('Instances')
+    # plt.yscale('log')
+    # plt.show()
+
+def heat_map(run=sim.input_test):
+    y = np.linspace(-sim.w / 2, sim.w / 2, 100)
+    z = np.linspace(-sim.h / 2, sim.h / 2, 10)
+    heat = np.zeros((z.size, y.size))
+    for i in range(len(y)):
+        for j in range(len(z)):
+            #print('{i} {j}')
+            heat[j, i] = run(y[i], z[j])
+        print(i)
+
+    fig, ax = plt.subplots()
+
+    im = ax.imshow(heat, cmap='magma', extent=(-sim.w / 2, sim.w / 2, -sim.h / 2, sim.h / 2))
+    plt.colorbar(im, ax=ax, label="Rate of Detection")
+    ax.set_title('Detection RateHeatmap')
+    ax.invert_xaxis()
     plt.show()
+
 
 # efficiency_histogram()
 
-absorption_histogram(10000)
+# absorption_histogram(10000)
+
+heat_map()
