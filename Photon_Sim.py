@@ -37,7 +37,7 @@ class Simulation:
         # no randomness occurs within this method, rather it updates self.length to the most recent attribute values or returns false if they lead to an impossible path
 
         Tmin_x = -self.l / 2
-        Tmax_x = self.l / 2 # x direction originally was longest direction, but was switched to beam direction since it works differently here and that's the only direction that should work differently
+        Tmax_x = self.l / 2 # x direction originally was the longest direction, but was switched to beam direction since it works differently here and that's the only direction that should work differently
         #print(self.phi_line)
         Tmin_y = ((-self.w / 2) - self.Xoy) / math.tan(self.phi_line)
         Tmax_y = ((self.w / 2) - self.Xoy) / math.tan(self.phi_line)
@@ -498,27 +498,49 @@ class Simulation:
                 count += 1
         return count / n
 
-    def run(self, y, z, stages, *args, n=None):
+    def run(self, y, z, dimensions, *args, n=None):
 
-        # generates self.iterations number of photons with random position and velocities withing the scintillator and returns the fraction that are detected
+        # Generates self.iterations number of photons with random positions on an input line and velocities within the
+        # scintillator and returns the fraction that are detected, allowing inputs for the indexes of materials between
+        # the scintillator and detector.
+        # assumes detector == 2 or 3
 
         if n is None:
             n = self.iterations
         count = 0
-        dims = np.array([self.l, self.w, self.h])
-        r_indices = [self.n1] + list(args[:stages - 1]) + [self.n3] # list indices of refraction to allow iteration through the mediums a photon must transit
-        print(r_indices)
+        dims = np.concatenate((np.array([[self.l, self.w, self.h]]), dimensions, np.array([[self.lp, self.wp, self.hp]])))
+        r_indices = [self.n1] + list(args) + [self.n3] # list indices of refraction to allow iteration through the mediums a photon must transit
+        #print(dims)
         for i in range(n):
-            Ro = np.array([np.random.uniform(low=-1.0, high=1.0) * dims[0] / 2, y, z])
+            Ro = np.array([np.random.uniform(low=-1.0, high=1.0) * dims[0, 0] / 2, y, z])
             Vo = self.random_three_vector()[0]
             j = 0
             while j < len(r_indices) - 1:
+                print(j)
+                # iterating through index of refraction
                 self.n1 = r_indices[j]
-                self.n3 = r_indices[j+1]
+                self.n3 = r_indices[j + 1]
+                self.theta_critical = (math.asin(self.n2 / self.n1))
+                try:
+                    self.theta_detect = (math.asin(self.n3 / self.n1))
+                except ValueError:
+                    self.theta_detect = math.pi / 2
+
+                # iterating through dimensions
+                self.l, self.w, self.h = dims[j, 0], dims[j, 1],dims[j, 2]
+                self.lp, self.wp, self.hp = dims[j + 1, 0], dims[j + 1, 1], dims[j + 1, 2]
                 detection = self.ray_trace(Vo, Ro)
                 if detection[0]:
-                    count += 1
-
+                    if j == len(r_indices) - 2:
+                        count += 1
+                    else:
+                        print(detection)
+                        Ro, Vo = detection[2], detection[3]
+                        Ro[1] = - dims[j + 1, 1] / 2
+                        print(Ro)
+                        print(Vo)
+                else:
+                    break
                 j += 1
         return count / n
 
@@ -619,4 +641,5 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
 # print(f'Detected {sim.random_test()[0] * 100}%')
 #print(f'Detected {sim.input_test(0, 0) * 100}%')
-print(sim.run(0, 0, 4, 1.57, 1.502, 1.0,))
+dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
