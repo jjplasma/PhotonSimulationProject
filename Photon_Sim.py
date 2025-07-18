@@ -4,8 +4,8 @@ import random
 
 class Simulation:
 
-    def __init__(self, l, w, h, lp, wp, hp, n1, n2, n3, phi_line,
-                 theta_line, detector=3, air_gap=False, Xoy=0, Xoz=0, iterations=1000, nplastic=1.502):
+    def __init__(self, l, w, h, lp, wp, hp, n1, n2, n3, phi_line=math.pi/4,
+                 theta_line=math.pi/4, detector=3, air_gap=False, Xoy=0, Xoz=0, iterations=1000, nplastic=1.502):
         self.l = l # scintillator length: x 2?
         self.w = w # scintillator width: y 30?
         self.h = h # scintillator height: z 3?
@@ -19,8 +19,8 @@ class Simulation:
         # scintillator attaches to the SiPM window
         self.detector[detector] = True
         self.air_gap = air_gap # True if there is air between
-        self.phi_line = phi_line
-        self.theta_line = theta_line
+        self.phi_line = phi_line # phi of old random_line method
+        self.theta_line = theta_line # theta of old random_line method
         self.Xoy = Xoy # displacement from center of scintillator?
         self.Xoz = Xoz # displacement from center of scintillator?
         self.theta_critical = (math.asin(n2 / n1)) # minimum angle for TIR
@@ -28,6 +28,7 @@ class Simulation:
         self.nplastic = nplastic
         #self.theta_pass = (math.asin(nplastic / n1))
         self.theta_detect = (math.asin(n3 / n1))
+        self.back = False
 
 
     def random_line(self):
@@ -122,7 +123,6 @@ class Simulation:
                     break
 
         return valid if valid else False
-
 
     def photon(self, V, Ro, rec=0):
 
@@ -417,7 +417,10 @@ class Simulation:
                         # print('rare bounce')
                         return self.ray_trace(V, R, rec + 1, length)
                     # calculate new V
-
+                    phi = np.arctan(V[(i + 2) % 3] / V[(i + 1) % 3])
+                    V[(i + 1) % 3] = np.sin(theta_t) * np.cos(phi)
+                    V[(i + 2) % 3] = np.sin(theta_t) * np.sin(phi)
+                    V[i] = np.cos(theta_t)
                     return [True, length, R, V]
 
                 if theta_i > self.theta_critical: # avoids extra computation for case of TIR
@@ -472,8 +475,9 @@ class Simulation:
             if detection[0]:
                 if plastic:
                     Ro = detection[1]
-                hits.append(detection[1:2])
-                count += 1
+                else:
+                    hits.append(detection[1:2])
+                    count += 1
             else:
                 misses.append(detection[1:2])
         return count / self.iterations, np.array(hits), np.array(misses)
@@ -494,7 +498,31 @@ class Simulation:
                 count += 1
         return count / n
 
-    def run(self, detected_photon=0):
+    def run(self, y, z, stages, *args, n=None):
+
+        # generates self.iterations number of photons with random position and velocities withing the scintillator and returns the fraction that are detected
+
+        if n is None:
+            n = self.iterations
+        count = 0
+        dims = np.array([self.l, self.w, self.h])
+        r_indices = [self.n1] + list(args[:stages - 1]) + [self.n3] # list indices of refraction to allow iteration through the mediums a photon must transit
+        print(r_indices)
+        for i in range(n):
+            Ro = np.array([np.random.uniform(low=-1.0, high=1.0) * dims[0] / 2, y, z])
+            Vo = self.random_three_vector()[0]
+            j = 0
+            while j < len(r_indices) - 1:
+                self.n1 = r_indices[j]
+                self.n3 = r_indices[j+1]
+                detection = self.ray_trace(Vo, Ro)
+                if detection[0]:
+                    count += 1
+
+                j += 1
+        return count / n
+
+    def run_old(self, detected_photon=0):
 
         # runs the simulation of default 1000 photons emitting in the scintillator
 
@@ -550,9 +578,8 @@ class Simulation:
         #print(self.photon_pass_phi_pi)
         #print(self.photon_hit_phi_pi)
 
-
     def check(self):
-        self.run()
+        self.run_old()
         choose_phi = int(input("What phi angle?"))
         if choose_phi == 0:
             return self.photon_pass_phi_0, self.photon_hit_phi_0, choose_phi
@@ -560,7 +587,7 @@ class Simulation:
             return self.photon_pass_phi_pi, self.photon_hit_phi_pi, choose_phi
 
     def path_length(self):
-        self.run()
+        self.run_old()
         if not self.random_line():
             return 0
         else:
@@ -568,13 +595,13 @@ class Simulation:
             return self.length
 
     def eff(self):
-        self.run()
+        self.run_old()
         return self.efficiency
 
 
 
 #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
-sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, math.pi/4, math.pi/2, detector=2)
+sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
 #sim.run()
 #print(f'Efficiency: {sim.efficiency}%')
@@ -582,7 +609,7 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, math.pi/4, mat
 #print(f'Path length: {sim.length}')
 #print(f'Path length new: {sim.path_length()}') # currently unrelated to previous run
 
-# V = np.array([0, 1, 2]) #suspected bug with bounces on the top or bottom wall
+# V = np.array([0, 1, 2])
 # Ro = np.array([0, 0, 0])
 # print(sim.theta_critical)
 # if sim.ray_trace(V, Ro):
@@ -591,4 +618,5 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, math.pi/4, mat
 #     print('Lost')
 
 # print(f'Detected {sim.random_test()[0] * 100}%')
-print(f'Detected {sim.input_test(0, 0) * 100}%')
+#print(f'Detected {sim.input_test(0, 0) * 100}%')
+print(sim.run(0, 0, 4, 1.57, 1.502, 1.0,))
