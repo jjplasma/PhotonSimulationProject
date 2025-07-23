@@ -4,7 +4,7 @@ import numpy as np
 import math
 import random
 
-sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, math.pi/4, math.pi/2, detector=2)
+sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
 def efficiency_histogram(n=1000):
     results = np.zeros(n)
@@ -57,7 +57,7 @@ def heat_map(*args, run=sim.input_test):
     for i in range(len(y)):
         for j in range(len(z)):
             #print('{i} {j}')
-            heat[j, i] = run(y[i], z[j], *args, n=100)
+            heat[j, i] = run(y[i], z[j], *args, n=1000)
         print(i)
 
     fig, ax = plt.subplots()
@@ -67,7 +67,6 @@ def heat_map(*args, run=sim.input_test):
     ax.set_title('Detection Rate Heatmap')
     ax.invert_xaxis()
     plt.show()
-
 
 # efficiency_histogram()
 

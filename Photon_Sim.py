@@ -547,7 +547,6 @@ class Simulation:
             Vo = self.random_three_vector()[0]
             j = 0
             length = 0
-            #self.back = False
             self.theta_back = math.pi / 2
             while j < len(r_indices) - 1:
                 #print(j)
@@ -597,7 +596,10 @@ class Simulation:
                 j += 1
         self.l, self.w, self.h = dims[0, 0], dims[0, 1], dims[0, 2]
         self.lp, self.wp, self.hp = dims[1, 0], dims[1, 1], dims[1, 2]
-        print(dims)
+        self.n1 = r_indices[0]
+        self.n3 = r_indices[-1]
+        self.theta_critical = (math.asin(self.n2 / self.n1))
+        self.back = False
         return count / n
 
     def run_old(self, detected_photon=0):
@@ -699,3 +701,4 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 #print(f'Detected {sim.input_test(0, 0) * 100}%')
 dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
 print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0)) #weird glitch where rate is better after first run
