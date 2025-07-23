@@ -50,21 +50,21 @@ def absorption_histogram(n=1000):
     # plt.yscale('log')
     # plt.show()
 
-def heat_map(run=sim.input_test):
+def heat_map(*args, run=sim.input_test):
     y = np.linspace(-sim.w / 2, sim.w / 2, 100)
     z = np.linspace(-sim.h / 2, sim.h / 2, 10)
     heat = np.zeros((z.size, y.size))
     for i in range(len(y)):
         for j in range(len(z)):
             #print('{i} {j}')
-            heat[j, i] = run(y[i], z[j])
+            heat[j, i] = run(y[i], z[j], *args, n=100)
         print(i)
 
     fig, ax = plt.subplots()
 
     im = ax.imshow(heat, cmap='magma', extent=(-sim.w / 2, sim.w / 2, -sim.h / 2, sim.h / 2))
     plt.colorbar(im, ax=ax, label="Rate of Detection")
-    ax.set_title('Detection RateHeatmap')
+    ax.set_title('Detection Rate Heatmap')
     ax.invert_xaxis()
     plt.show()
 
@@ -72,5 +72,7 @@ def heat_map(run=sim.input_test):
 # efficiency_histogram()
 
 # absorption_histogram(10000)
-
-heat_map()
+dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+#print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+heat_map(dimensions, 1.57, 1.502, 1.0, run=sim.run)
+#heat_map()

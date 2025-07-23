@@ -30,6 +30,7 @@ class Simulation:
         self.theta_detect = (math.asin(n3 / n1))
         self.back = False
         self.theta_back = math.pi / 2
+        self.lwhb = [0, 0, 0] # backflow window length, width, and height
 
 
     def random_line(self):
@@ -381,15 +382,16 @@ class Simulation:
         if length > 3800 or rec > 900: # !rewrite later to take attenuation length into account (attenuation length: 380 cm)
             #print(f'Absorbed in {rec}')
             #print(length)
-            return [False, length]
+            return [False, length, False]
+
+        dims = [self.l, self.w, self.h]
+        window = [self.lp, self.wp, self.hp]  # allows easier iterating across dimensions
 
         for i in range(3): # checks each wall of the scintillator until it finds the one that the photon will hit
             # i equalling 0 in this loop makes this section check the x component of V, and so on.
             if V[i] == 0:
                 continue
 
-            dims = [self.l, self.w, self.h]
-            window = [self.lp, self.wp, self.hp] # allows easier iterating across dimensions
             R = np.zeros(3)
             R[i] = math.copysign(dims[i]/2, V[i])
             t = (R[i] - Ro[i]) / V[i]
@@ -397,53 +399,60 @@ class Simulation:
             R[(i+2) % 3] = Ro[(i+2) % 3] + V[(i+2) % 3] * t
             #finds the coordinates where the photon hits the plane of each of the scintillators walls
 
-            if (np.abs(R[i]) <= dims[i]/2) and (np.abs(R[(i+1) % 3]) <= dims[(i+1) % 3]/2) and (np.abs(R[(i+2) % 3]) <= dims[(i+2) % 3]/2): # checks to see if any of those two points are within the boundaries of the box
+            if (np.abs(R[i]) <= dims[i]/2) and (np.abs(R[(i+1) % 3]) <= dims[(i+1) % 3]/2) and (np.abs(R[(i+2) % 3]) <= dims[(i+2) % 3]/2): # checks to see if the new point is within the boundaries of the box
                 theta_i = (math.acos(abs(V[i]) / math.sqrt(V[(i+1) % 3] ** 2 + V[i] ** 2 + V[(i+2) % 3] ** 2))) # extracts angle the photon intersects with the wall
                 #print(theta_i)
                 length += np.linalg.norm(R - Ro)
                 #print(length)
 
-                if np.abs(R[(i + 1) % 3]) <= window[(i + 1) % 3] / 2 and np.abs(R[(i + 1) % 3]) <= window[(i + 2) % 3] / 2:
-                    if (self.detector[i * 2] and R[i] == dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == -dims[i] / 2):  # checks that the photon could hit the detector at this intersection point
-                        if theta_i > self.theta_detect:
-                            return [False, length]
-                        theta_t = math.asin((self.n1 / self.n3) * math.sin(theta_i))  # transmission angle
-                        r_perp = (self.n1 * math.cos(theta_i) - self.n3 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n3 * math.cos(theta_t))
-                        r_para = (self.n1 * math.cos(theta_t) - self.n3 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n3 * math.cos(theta_i))  # Fresnel's equations
-                        r_ave = (abs(r_perp) + abs(r_para)) / 2
-                        Reflectance = (r_ave ** 2)  # calculates average reflectance regardless of polarization and converts into decimal chance of reflecting
-                        select_path = random.uniform(0, 1)
-                        if select_path <= Reflectance:
-                            V[i] *= -1
-                            # print('rare bounce')
-                            return self.ray_trace(V, R, rec + 1, length)
-                        # calculate new V
-                        phi = np.arctan(V[(i + 2) % 3] / V[(i + 1) % 3])
-                        V[(i + 1) % 3] = np.sin(theta_t) * np.cos(phi)
-                        V[(i + 2) % 3] = np.sin(theta_t) * np.sin(phi)
-                        V[i] = np.cos(theta_t)
-                        return [True, length, R, V]
+                if np.abs(R[(i + 1) % 3]) <= window[(i + 1) % 3] / 2 and np.abs(R[(i + 2) % 3]) <= window[(i + 2) % 3] / 2 \
+                    and ((self.detector[i * 2] and R[i] == dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == -dims[i] / 2)):  # checks that the photon could hit the detector at this intersection point
+                    if theta_i > self.theta_detect:
+                        return [False, length, False]
+                    theta_t = math.asin((self.n1 / self.n3) * math.sin(theta_i))  # transmission angle
+                    r_perp = (self.n1 * math.cos(theta_i) - self.n3 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n3 * math.cos(theta_t))
+                    r_para = (self.n1 * math.cos(theta_t) - self.n3 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n3 * math.cos(theta_i))  # Fresnel's equations
+                    r_ave = (abs(r_perp) + abs(r_para)) / 2
+                    Reflectance = (r_ave ** 2)  # calculates average reflectance regardless of polarization and converts into decimal chance of reflecting
+                    select_path = random.uniform(0, 1)
+                    if select_path <= Reflectance:
+                        V[i] *= -1
+                        # print('rare bounce')
+                        return self.ray_trace(V, R, rec + 1, length)
+                    # calculate new V
+                    #print(V)
+                    phi = np.arctan(V[(i + 2) % 3] / V[(i + 1) % 3])
+                    V[(i + 1) % 3] = math.copysign(np.sin(theta_t) * np.cos(phi), V[(i + 1) % 3])
+                    V[(i + 2) % 3] = math.copysign(np.sin(theta_t) * np.sin(phi), V[(i + 2) % 3])
+                    V[i] = math.copysign(np.cos(theta_t), V[i])
+                    return [True, length, R, V, False]
 
-                    if self.back and ((self.detector[i * 2] and R[i] == -dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == dims[i] / 2)):  # checks that the photon could hit the detector at this intersection point
-                        if theta_i > self.theta_back:
-                            V[i] *= -1
-                            return self.ray_trace(V, R, rec + 1, length)
-                        theta_t = math.asin((self.n1 / self.n3) * math.sin(theta_i))  # transmission angle
-                        r_perp = (self.n1 * math.cos(theta_i) - self.n3 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n3 * math.cos(theta_t))
-                        r_para = (self.n1 * math.cos(theta_t) - self.n3 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n3 * math.cos(theta_i))  # Fresnel's equations
-                        r_ave = (abs(r_perp) + abs(r_para)) / 2
-                        Reflectance = (r_ave ** 2)  # calculates average reflectance regardless of polarization and converts into decimal chance of reflecting
-                        select_path = random.uniform(0, 1)
-                        if select_path <= Reflectance:
-                            V[i] *= -1
-                            # print('rare bounce')
-                            return self.ray_trace(V, R, rec + 1, length)
-                        # calculate new V
-                        phi = np.arctan(V[(i + 2) % 3] / V[(i + 1) % 3])
-                        V[(i + 1) % 3] = np.sin(theta_t) * np.cos(phi)
-                        V[(i + 2) % 3] = np.sin(theta_t) * np.sin(phi)
-                        V[i] = np.cos(theta_t)
-                        return [False, length, R, V, 'backflow']
+                if np.abs(R[(i + 1) % 3]) <= self.lwhb[(i + 1) % 3] / 2 and np.abs(R[(i + 2) % 3]) <= self.lwhb[(i + 2) % 3] / 2 \
+                    and self.back and ((self.detector[i * 2] and R[i] == -dims[i] / 2) or (self.detector[(i * 2) + 1] and R[i] == dims[i] / 2)):  # checks that the photon could backflow at this intersection point
+                    #print(f'back: {self.lwhb[(i + 1) % 3] / 2} by {self.lwhb[(i + 2) % 3] / 2} \n ')
+                    if theta_i > self.theta_back:
+                        V[i] *= -1
+                        return self.ray_trace(V, R, rec + 1, length)
+                    theta_t = math.asin((self.n1 / self.nback) * math.sin(theta_i))  # transmission angle
+                    #print(theta_i)
+                    #print(theta_t)
+                    r_perp = (self.n1 * math.cos(theta_i) - self.nback * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.nback * math.cos(theta_t))
+                    r_para = (self.n1 * math.cos(theta_t) - self.nback * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.nback * math.cos(theta_i))  # Fresnel's equations
+                    r_ave = (abs(r_perp) + abs(r_para)) / 2
+                    Reflectance = (r_ave ** 2)  # calculates average reflectance regardless of polarization and converts into decimal chance of reflecting
+                    select_path = random.uniform(0, 1)
+                    if select_path <= Reflectance:
+                        V[i] *= -1
+                        # print('rare bounce')
+                        return self.ray_trace(V, R, rec + 1, length)
+                    # calculate new V
+                    phi = np.arctan(V[(i + 2) % 3] / V[(i + 1) % 3])
+                    # print(V)
+                    V[(i + 1) % 3] = math.copysign(np.sin(theta_t) * np.cos(phi), V[(i + 1) % 3])
+                    V[(i + 2) % 3] = math.copysign(np.sin(theta_t) * np.sin(phi), V[(i + 2) % 3])
+                    V[i] = math.copysign(np.cos(theta_t), V[i])
+                    #print(V)
+                    return [False, length, R, V, True]
 
                 if theta_i > self.theta_critical: # avoids extra computation for case of TIR
 
@@ -464,9 +473,9 @@ class Simulation:
                         # print('bounce')
                         return self.ray_trace(V, R, rec + 1, length)
                     # print('escape')
-                    return [False, length]
+                    return [False, length, False]
 
-        raise Exception('Photon tunneled out of sim, look for bugs')
+        raise Exception(f'Photon tunneled out of sim, look for bugs \n R: {Ro} \n V: {V}, \n Dims: {dims}')
 
     def random_three_vector(self):
         # written by Majd Ghrear in a previous project to isotropically generate direction vectors
@@ -537,10 +546,11 @@ class Simulation:
             Ro = np.array([np.random.uniform(low=-1.0, high=1.0) * dims[0, 0] / 2, y, z])
             Vo = self.random_three_vector()[0]
             j = 0
-            self.back = False
+            length = 0
+            #self.back = False
             self.theta_back = math.pi / 2
             while j < len(r_indices) - 1:
-                print(j)
+                #print(j)
                 # iterating through index of refraction
                 self.n1 = r_indices[j]
                 self.n3 = r_indices[j + 1]
@@ -557,26 +567,37 @@ class Simulation:
                         self.theta_back = (math.asin(self.nback / self.n1))
                     except ValueError:
                         self.theta_back = math.pi / 2
+                    self.lwhb = [dims[j - 1, 0], dims[j - 1, 1], dims[j - 1, 2]]
+                else:
+                    self.back = False
 
                 # iterating through dimensions
                 self.l, self.w, self.h = dims[j, 0], dims[j, 1],dims[j, 2]
                 self.lp, self.wp, self.hp = dims[j + 1, 0], dims[j + 1, 1], dims[j + 1, 2]
-                detection = self.ray_trace(Vo, Ro)
-                if detection[0] or detection[-1] == 'backflow':
-                    if detection[-1] == 'backflow':
+                detection = self.ray_trace(Vo, Ro, length=length)
+                if detection[0] or detection[-1]:
+                    length += detection[1]
+                    if detection[-1]:
                         j -= 2
-
-                    if j == len(r_indices) - 2:
+                        Ro, Vo = detection[2], detection[3]
+                        Ro[1] = dims[j + 1, 1] / 2
+                        # print('backflow')
+                        # print(Ro)
+                        # print(Vo)
+                    elif j == len(r_indices) - 2:
                         count += 1
                     else:
-                        print(detection)
+                        #print(detection[2:4])
                         Ro, Vo = detection[2], detection[3]
                         Ro[1] = - dims[j + 1, 1] / 2
-                        print(Ro)
-                        print(Vo)
+                        #print(Ro)
+                        #print(Vo)
                 else:
                     break
                 j += 1
+        self.l, self.w, self.h = dims[0, 0], dims[0, 1], dims[0, 2]
+        self.lp, self.wp, self.hp = dims[1, 0], dims[1, 1], dims[1, 2]
+        print(dims)
         return count / n
 
     def run_old(self, detected_photon=0):
@@ -674,7 +695,7 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 # else:
 #     print('Lost')
 
-# print(f'Detected {sim.random_test()[0] * 100}%')
+#print(f'Detected {sim.random_test()[0] * 100}%')
 #print(f'Detected {sim.input_test(0, 0) * 100}%')
 dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
 print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
