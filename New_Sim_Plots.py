@@ -57,7 +57,7 @@ def heat_map(*args, run=sim.input_test):
     for i in range(len(y)):
         for j in range(len(z)):
             #print('{i} {j}')
-            heat[j, i] = run(y[i], z[j], *args, n=1000)
+            heat[j, i] = run(y[i], z[j], *args)
         print(i)
 
     fig, ax = plt.subplots()

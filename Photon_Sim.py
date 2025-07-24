@@ -595,7 +595,7 @@ class Simulation:
                     break
                 j += 1
         self.l, self.w, self.h = dims[0, 0], dims[0, 1], dims[0, 2]
-        self.lp, self.wp, self.hp = dims[1, 0], dims[1, 1], dims[1, 2]
+        self.lp, self.wp, self.hp = dims[-1, 0], dims[-1, 1], dims[-1, 2]
         self.n1 = r_indices[0]
         self.n3 = r_indices[-1]
         self.theta_critical = (math.asin(self.n2 / self.n1))
@@ -699,6 +699,19 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
 #print(f'Detected {sim.random_test()[0] * 100}%')
 #print(f'Detected {sim.input_test(0, 0) * 100}%')
+
+def print_class_attributes(obj):
+    """
+    Prints all attributes and their values for a given object.
+
+    Args:
+        obj: The object whose attributes are to be printed.
+    """
+    print(f"Attributes of {obj.__class__.__name__}:")
+    if hasattr(obj, '__dict__'):
+        for attr, value in obj.__dict__.items():
+            print(f"  {attr}: {value}")
+
 dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+#print_class_attributes(sim)
 print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
-print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0)) #weird glitch where rate is better after first run
