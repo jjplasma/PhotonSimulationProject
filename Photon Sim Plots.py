@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import csv
 
+# This code refers to an old version of the Simulation class and no longer runs.
+# It has not been deleted in case it could inspire useful plots later.
+
 def n1_vary(wp, hp, air_gap):
     n1 = []
     eff = []
