@@ -64,6 +64,7 @@ class Simulation:
             t = (R[i] - Ro[i]) / V[i]
             R[(i+1) % 3] = Ro[(i+1) % 3] + V[(i+1) % 3] * t
             R[(i+2) % 3] = Ro[(i+2) % 3] + V[(i+2) % 3] * t
+            #print(R)
             #finds the coordinates where the photon hits the plane of each of the scintillators walls
 
             if (np.abs(R[i]) <= dims[i]/2) and (np.abs(R[(i+1) % 3]) <= dims[(i+1) % 3]/2) and (np.abs(R[(i+2) % 3]) <= dims[(i+2) % 3]/2): # checks to see if the new point is within the boundaries of the box

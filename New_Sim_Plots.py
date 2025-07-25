@@ -6,10 +6,25 @@ import random
 
 sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
-def efficiency_histogram(n=1000):
+def random_efficiency_histogram(n=1000):
     results = np.zeros(n)
     for i in range (n):
         results[i] = sim.random_test()[0]
+        print(i)
+    plt.hist(results, bins=20)
+    plt.title('Rate of Detection for Randomly Generated Photons')
+    plt.xlabel('Fraction of Photons Detected')
+    plt.ylabel('Instances')
+    print(f'Median: {np.median(results)}')
+    print(f'Mean: {np.mean(results)}')
+    plt.show()
+
+def efficiency_histogram(*args, n=1000):
+    results = np.zeros(n)
+    y = np.random.uniform(-1.0, 1.0, n) * sim.w / 2
+    z = np.random.uniform(-1.0, 1.0, n) * sim.h / 2
+    for i in range (n):
+        results[i] = sim.run(y[i], z[i], *args)
         print(i)
     plt.hist(results, bins=20)
     plt.title('Rate of Detection for Randomly Generated Photons')
@@ -68,10 +83,12 @@ def heat_map(*args, run=sim.input_test):
     ax.invert_xaxis()
     plt.show()
 
-# efficiency_histogram()
+
+dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
 
 # absorption_histogram(10000)
-dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+
 #print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
-heat_map(dimensions, 1.57, 1.502, 1.0, run=sim.run)
+#heat_map(dimensions, 1.57, 1.502, 1.0, run=sim.run)
 #heat_map()
