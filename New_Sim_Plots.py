@@ -19,20 +19,40 @@ def random_efficiency_histogram(n=1000):
     print(f'Mean: {np.mean(results)}')
     plt.show()
 
-def efficiency_histogram(*args, n=1000):
+def efficiency_histogram(*args, n=1000, plot=True):
     results = np.zeros(n)
     y = np.random.uniform(-1.0, 1.0, n) * sim.w / 2
     z = np.random.uniform(-1.0, 1.0, n) * sim.h / 2
     for i in range (n):
         results[i] = sim.run(y[i], z[i], *args)
         print(i)
-    plt.hist(results, bins=20)
-    plt.title('Rate of Detection for Randomly Generated Photons')
-    plt.xlabel('Fraction of Photons Detected')
-    plt.ylabel('Instances')
-    print(f'Median: {np.median(results)}')
-    print(f'Mean: {np.mean(results)}')
+    median = np.median(results)
+    #print(f'Median: {median}')
+    #print(f'Mean: {np.mean(results)}')
+    if plot:
+        plt.hist(results, bins=20)
+        plt.title('Rate of Detection for Randomly Generated Photons')
+        plt.xlabel('Fraction of Photons Detected')
+        plt.ylabel('Instances')
+        plt.show()
+    return median
+
+def gap_efficiency_scatter(point=101):
+    ds = np.concatenate((np.linspace(0, 1, point), np.linspace(1.1, 2, point // 10)))
+    eff = np.zeros_like(ds)
+    for i in range(len(ds)):
+        dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, ds[i], 100.0]])
+        eff[i] = efficiency_histogram(dimensions, 1.57, 1.502, 1.0, plot=False)
+        print(f'{round( 100 * i / (point + point // 10), 1)}%')
+    b, m = np.polynomial.polynomial.Polynomial.fit(ds, eff, 1).convert().coef
+    plt.scatter(ds, eff)
+    plt.plot(ds, (m * ds) + b, label=f'Best Fit: \n Slope: {m} \n Intercept: {b}')
+    plt.title('Rate of Detection by Gap Distance between Light Pipe and SiPM Window')
+    plt.xlabel('Airgap Distance (mm)')
+    plt.ylabel('Rate of Photon Detection')
+    plt.legend()
     plt.show()
+
 
 def absorption_histogram(n=1000):
     sim.iterations = n
@@ -84,11 +104,15 @@ def heat_map(*args, run=sim.input_test):
     plt.show()
 
 
-dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
-efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
+#dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 1.0, 100.0]])
+#efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
 
+#dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0]])
+#efficiency_histogram(dimensions, 1.57, 1.502)
 # absorption_histogram(10000)
 
 #print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
 #heat_map(dimensions, 1.57, 1.502, 1.0, run=sim.run)
 #heat_map()
+
+gap_efficiency_scatter()
