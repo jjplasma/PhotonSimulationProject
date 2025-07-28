@@ -35,24 +35,47 @@ def efficiency_histogram(*args, n=1000, plot=True):
         plt.xlabel('Fraction of Photons Detected')
         plt.ylabel('Instances')
         plt.show()
-    return median
+    return median, results
 
 def gap_efficiency_scatter(point=101):
     ds = np.concatenate((np.linspace(0, 1, point), np.linspace(1.1, 2, point // 10)))
     eff = np.zeros_like(ds)
+    err = np.zeros_like(ds)
     for i in range(len(ds)):
         dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, ds[i], 100.0]])
-        eff[i] = efficiency_histogram(dimensions, 1.57, 1.502, 1.0, plot=False)
-        print(f'{round( 100 * i / (point + point // 10), 1)}%')
+        eff[i], results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0, plot=False)
+        err[i] = np.std(results)
+        print(f'{round(100 * i / (point + point // 10), 1)}%')
     b, m = np.polynomial.polynomial.Polynomial.fit(ds, eff, 1).convert().coef
-    plt.scatter(ds, eff)
-    plt.plot(ds, (m * ds) + b, label=f'Best Fit: \n Slope: {m} \n Intercept: {b}')
+    fig = plt.figure()
+    plt.errorbar(ds, eff, yerr=err, fmt='o', ls='', elinewidth=.5)
+    plt.plot(ds, (m * ds) + b, label=f'Best Fit: \n Slope: {m:.2f} \n Intercept: {b:.2f}')
     plt.title('Rate of Detection by Gap Distance between Light Pipe and SiPM Window')
     plt.xlabel('Airgap Distance (mm)')
     plt.ylabel('Rate of Photon Detection')
     plt.legend()
-    plt.show()
+    plt.show(block=False)
+    plt.pause(1)
 
+def pipe_length_efficiency_scatter(point=101):
+    ds = np.linspace(50, 60, point)
+    eff = np.zeros_like(ds)
+    err = np.zeros_like(ds)
+    for i in range(len(ds)):
+        dimensions = np.array([[2.0, 0.125, 3.0], [2.0, ds[i], 3.0]])
+        eff[i], results = efficiency_histogram(dimensions, 1.57, 1.502, plot=False)
+        err[i] = np.std(results)
+        print(f'{round(100 * i / point, 1)}%')
+    b, m = np.polynomial.polynomial.Polynomial.fit(ds, eff, 1).convert().coef
+    fig = plt.figure()
+    plt.errorbar(ds, eff, yerr=err, fmt='o', ls='', elinewidth=.5)
+    plt.plot(ds, (m * ds) + b, label=f'Best Fit: \n Slope: {m:.2f} \n Intercept: {b:.2f}')
+    plt.title('Rate of Detection by Light Pipe Length')
+    plt.xlabel('Light Pipe Length (mm)')
+    plt.ylabel('Rate of Photon Detection')
+    plt.legend()
+    plt.show(block=False)
+    plt.pause(1)
 
 def absorption_histogram(n=1000):
     sim.iterations = n
@@ -116,3 +139,5 @@ def heat_map(*args, run=sim.input_test):
 #heat_map()
 
 gap_efficiency_scatter()
+pipe_length_efficiency_scatter()
+plt.show()
