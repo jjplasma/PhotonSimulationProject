@@ -31,10 +31,11 @@ def efficiency_histogram(*args, n=1000, plot=True):
     #print(f'Mean: {np.mean(results)}')
     if plot:
         plt.hist(results, bins=20)
-        plt.title('Rate of Detection for Randomly Generated Photons')
+        plt.title('Rate of Detection for Photons from\nRandomly Generated Electron Paths')
         plt.xlabel('Fraction of Photons Detected')
         plt.ylabel('Instances')
-        plt.show()
+        plt.show(block=False)
+        plt.pause(.1)
     return median, results
 
 def gap_efficiency_scatter(point=101):
@@ -124,20 +125,32 @@ def heat_map(*args, run=sim.input_test):
     plt.colorbar(im, ax=ax, label="Rate of Detection")
     ax.set_title('Detection Rate Heatmap')
     ax.invert_xaxis()
-    plt.show()
+    plt.show(block=False)
+    plt.pause(.1)
 
 
-#dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 1.0, 100.0]])
-#efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
+dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]])
+median, results = efficiency_histogram(dimensions, 1.57, 4, 1.0)
+print(f'Median: {median}')
+print(f'Standard Deviation: {np.std(results)}')
+# dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+# median, results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
+# print(f'Median: {median}')
+# print(f'Standard Deviation: {np.std(results)}')
 
 #dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0]])
 #efficiency_histogram(dimensions, 1.57, 1.502)
 # absorption_histogram(10000)
 
 #print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
-#heat_map(dimensions, 1.57, 1.502, 1.0, run=sim.run)
-#heat_map()
 
-gap_efficiency_scatter()
-pipe_length_efficiency_scatter()
+# dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+# heat_map(dimensions, 1.57, 1.502, 1.0, run=sim.run)
+# dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+# heat_map(dimensions, 1.57, 4, 1.0, run=sim.run)
+# dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]])
+# heat_map(dimensions, 1.57, 4, 1.0, run=sim.run)
+
+#gap_efficiency_scatter()
+#pipe_length_efficiency_scatter()
 plt.show()
