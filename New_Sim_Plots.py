@@ -1,5 +1,6 @@
 from Photon_Sim import Simulation
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 import math
 import random
@@ -30,9 +31,10 @@ def efficiency_histogram(*args, n=1000, plot=True):
     #print(f'Median: {median}')
     #print(f'Mean: {np.mean(results)}')
     if plot:
+        fig = plt.figure()
         plt.hist(results, bins=20)
         plt.title('Rate of Detection for Photons from\nRandomly Generated Electron Paths')
-        plt.xlabel('Fraction of Photons Detected')
+        plt.xlabel('Fraction of Photons Detected'   )
         plt.ylabel('Instances')
         plt.show(block=False)
         plt.pause(.1)
@@ -128,11 +130,49 @@ def heat_map(*args, run=sim.input_test):
     plt.show(block=False)
     plt.pause(.1)
 
+def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])):
+    sim.history = True
+    print(sim.run(0, 0, dimensions, *args, n=sample))
+    fig, ax = plt.subplots(figsize=(30, 5))
+    #print(sim.paths)
+
+    for ls in sim.paths:
+        path = np.array(ls)
+        print(path)
+        for i in range(path.shape[0] - 1):
+            if path[i, 0] == path[i + 1, 0]:
+                path[i + 1:, 1] += (path[i, 1] - path[i + 1, 1])
+
+            plt.plot(path[:,1], path[:,2])
+
+    # path = np.array(sim.paths[0])
+    # for i in range(path.shape[0] - 1):
+    #     if path[i, 0] == path[i + 1, 0]:
+    #         path[i + 1:, 1] += (path[i, 1] - path[i + 1, 1])
+    # print(path)
+    # plt.plot(path[:, 1], path[:, 2], label=f'Successful Paths')
+    plt.title('Path of a Detected Photon\nin Axes Normal to Electron Axis (x)')
+    plt.xlabel('y')
+    plt.ylabel('z')
+    plt.ylim(-2, 2)
+    plt.xlim(-16, 73)
+    scin = patches.Rectangle((-sim.w / 2, -sim.h / 2), sim.w, sim.h,
+                             linewidth=1, edgecolor='cyan', facecolor='cyan', label='Scintillator')
+    pipe = patches.Rectangle(((sim.w / 2) + float(dimensions[0, 1]), -float(dimensions[1, 2]) / 2),
+                             float(dimensions[1, 1]), float(dimensions[1, 2]),
+                             linewidth=1, edgecolor='y', facecolor='y', label='Light Pipe')
+    ax.add_patch(scin)
+    ax.add_patch(pipe)
+    plt.legend()
+    plt.show(block=False)
+    plt.pause(1)
+
+
 
 dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]])
-median, results = efficiency_histogram(dimensions, 1.57, 4, 1.0)
-print(f'Median: {median}')
-print(f'Standard Deviation: {np.std(results)}')
+# median, results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
+# print(f'Median: {median}')
+# print(f'Standard Deviation: {np.std(results)}')
 # dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
 # median, results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
 # print(f'Median: {median}')
@@ -153,4 +193,7 @@ print(f'Standard Deviation: {np.std(results)}')
 
 #gap_efficiency_scatter()
 #pipe_length_efficiency_scatter()
+
+paths_display(1.57, 1.502, 1.0, dimensions=dimensions, sample=1000)
+
 plt.show()

@@ -5,7 +5,8 @@ import random
 class Simulation:
 
     def __init__(self, l, w, h, lp, wp, hp, n1, n2, n3, phi_line=math.pi/4,
-                 theta_line=math.pi/4, detector=3, air_gap=False, Xoy=0, Xoz=0, iterations=1000, nplastic=1.502):
+                 theta_line=math.pi/4, detector=3, air_gap=False, Xoy=0, Xoz=0, iterations=1000, nplastic=1.502,
+                 history=False):
         self.l = l # scintillator length: x 2?
         self.w = w # scintillator width: y 30?
         self.h = h # scintillator height: z 3?
@@ -31,6 +32,9 @@ class Simulation:
         self.back = False # allows or disallows backflow
         self.theta_back = math.pi / 2
         self.lwhb = [0, 0, 0] # backflow window length, width, and height
+        self.history = history
+        self.positions = []
+        self.paths = []
 
     def ray_trace(self, V, Ro, rec=0, length=0):
 
@@ -46,13 +50,16 @@ class Simulation:
         #           boolean: true if backflows to previous stage]
         # Detector = 2 (or 3) are correct for the current dimensionality inputs
 
-        if length > 3800 or rec > 900: # !rewrite later to take attenuation length into account (attenuation length: 380 cm)
+        if length > 3800 or rec > 900: # (attenuation length: 380 cm)
             #print(f'Absorbed in {rec}')
             #print(length)
             return [False, length, False]
 
         dims = [self.l, self.w, self.h]
         window = [self.lp, self.wp, self.hp]  # allows easier iterating across dimensions
+
+        if self.history:
+            self.positions.append(Ro)
 
         for i in range(3): # checks each wall of the scintillator until it finds the one that the photon will hit
             # i equalling 0 in this loop makes this section check the x component of V, and so on.
@@ -214,11 +221,14 @@ class Simulation:
         for i in range(n):
             Ro = np.array([np.random.uniform(low=-1.0, high=1.0) * dims[0, 0] / 2, y, z])
             Vo = self.random_three_vector()[0]
+            if self.history:
+                self.positions = []
             j = 0 # tracks which stage the photon is in
             length = 0
             self.theta_back = math.pi / 2
             while j < len(r_indices) - 1:
                 #print(j)
+
                 # iterating through index of refraction
                 self.n1 = r_indices[j]
                 self.n3 = r_indices[j + 1]
@@ -245,7 +255,9 @@ class Simulation:
 
                 detection = self.ray_trace(Vo, Ro, length=length)
                 if detection[0] or detection[-1]:
-                    length += detection[1]
+                    length = detection[1]
+                    if self.history:
+                        self.positions.append(np.copy(detection[2]))
                     if detection[-1]: # backflow condition
                         j -= 2
                         Ro, Vo = detection[2], detection[3]
@@ -255,6 +267,8 @@ class Simulation:
                         # print(Vo)
                     elif j == len(r_indices) - 2: # detection condition
                         count += 1
+                        if self.history:
+                            self.paths.append(np.copy(self.positions))
                     else: # passage to next stage condition
                         #print(detection[2:4])
                         Ro, Vo = detection[2], detection[3]
@@ -262,6 +276,10 @@ class Simulation:
                         #print(Ro)
                         #print(Vo)
                 else:
+                    # if self.history and j==2 and length < 3800:
+                    #     print(length)
+                    #     self.paths.append(np.copy(self.positions))
+                    #     return 'Found path'
                     break
                 j += 1
 
@@ -272,6 +290,7 @@ class Simulation:
         self.n3 = r_indices[-1]
         self.theta_critical = (math.asin(self.n2 / self.n1))
         self.back = False
+        #print(dims)
         return count / n
 
 
@@ -280,11 +299,7 @@ class Simulation:
 #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
 sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
-#sim.run()
-#print(f'Efficiency: {sim.efficiency}%')
-#sim.new_line()
-#print(f'Path length: {sim.length}')
-#print(f'Path length new: {sim.path_length()}') # currently unrelated to previous run
+
 
 # V = np.array([0, 1, 2])
 # Ro = np.array([0, 0, 0])
@@ -297,6 +312,7 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 #print(f'Detected {sim.random_test()[0] * 100}%')
 #print(f'Detected {sim.input_test(0, 0) * 100}%')
 
-
+# sim.history = True
 dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
 print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+# print(sim.paths)
