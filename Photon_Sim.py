@@ -268,7 +268,7 @@ class Simulation:
                     elif j == len(r_indices) - 2: # detection condition
                         count += 1
                         if self.history:
-                            self.paths.append(np.copy(self.positions))
+                            self.paths.append([np.copy(pos) for pos in self.positions])
                     else: # passage to next stage condition
                         #print(detection[2:4])
                         Ro, Vo = detection[2], detection[3]

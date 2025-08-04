@@ -135,17 +135,31 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
     print(sim.run(0, 0, dimensions, *args, n=sample))
     fig, ax = plt.subplots(figsize=(30, 5))
     #print(sim.paths)
+    # print([len(p) for p in sim.paths])
+    # print(sim.paths[0])
+    # for ls in sim.paths:
+    #     path = np.array(ls, dtype=float)
+    #     #print(path)
+    #     for i in range(path.shape[0] - 1):
+    #         if np.isclose(path[i, 0], path[i + 1, 0]):
+    #             path[i + 1:, 1] += (path[i, 1] - path[i + 1, 1])
+    #         #print(path)
+    #         plt.plot(path[:,1], path[:,2])
 
     for ls in sim.paths:
-        path = np.array(ls)
-        print(path)
-        for i in range(path.shape[0] - 1):
-            if path[i, 0] == path[i + 1, 0]:
-                path[i + 1:, 1] += (path[i, 1] - path[i + 1, 1])
+        path = np.array(ls, dtype=float)
+        y_offset = 0
+        y_contin = []
+        for i in range(len(path)):
+            if i > 0 and np.isclose(path[i, 0], path[i - 1, 0]) and \
+                    np.isclose(path[i, 2], path[i - 1, 2]) and not np.isclose(path[i, 1], path[i - 1, 1]):
+                # segment boundary!
+                y_offset += (path[i - 1, 1] - path[i, 1])
+            y_contin.append([path[i, 0], path[i, 1] + y_offset, path[i, 2]])
+        y_contin = np.array(y_contin)
+        plt.plot(y_contin[:, 1], y_contin[:, 2], alpha=0.5)
 
-            plt.plot(path[:,1], path[:,2])
-
-    # path = np.array(sim.paths[0])
+    # path = np.array(sim.paths[2])
     # for i in range(path.shape[0] - 1):
     #     if path[i, 0] == path[i + 1, 0]:
     #         path[i + 1:, 1] += (path[i, 1] - path[i + 1, 1])
@@ -155,7 +169,7 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
     plt.xlabel('y')
     plt.ylabel('z')
     plt.ylim(-2, 2)
-    plt.xlim(-16, 73)
+    plt.xlim(-16.5, 73)
     scin = patches.Rectangle((-sim.w / 2, -sim.h / 2), sim.w, sim.h,
                              linewidth=1, edgecolor='cyan', facecolor='cyan', label='Scintillator')
     pipe = patches.Rectangle(((sim.w / 2) + float(dimensions[0, 1]), -float(dimensions[1, 2]) / 2),
