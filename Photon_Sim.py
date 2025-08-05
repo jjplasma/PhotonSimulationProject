@@ -207,7 +207,7 @@ class Simulation:
 
         # Generates self.iterations number of photons with random positions on an input line and random velocities
         # within the scintillator.
-        # Takes coordinates, dimensions for the intermediate portions, and arguments for the intermediate indices of
+        # Takes coordinates, n by 3 list of dimensions for the intermediate portions, and n arguments for the intermediate indices of
         # refraction and returns the fraction that are detected.
         # Assumes detector == 2 or 3
 
@@ -276,9 +276,9 @@ class Simulation:
                         #print(Ro)
                         #print(Vo)
                 else:
-                    # if self.history and j == 2 and length < 3800:
-                    #     self.positions.append(np.copy(detection[2]))
-                    #     self.paths.append([np.copy(pos) for pos in self.positions])
+                    if self.history and length < 3800:
+                        self.positions.append(np.copy(detection[2]))
+                        self.paths.append([np.copy(pos) for pos in self.positions])
                     break
                 j += 1
             #print(f'R: {Ro}\nV: {Vo}')
@@ -315,4 +315,10 @@ sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 # sim.history = True
 dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
 print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
-# print(sim.paths)
+
+
+import timeit
+
+timer = timeit.Timer(lambda: sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+elapsed = timer.timeit(100)
+print(f'Time taken: {elapsed:.6f} seconds')

@@ -149,10 +149,10 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
         y_contin = np.array(y_contin)
         plt.plot(y_contin[:, 1], y_contin[:, 2], alpha=0.4, lw=0.5)
         plt.scatter(y_contin[-1, 1], y_contin[-1, 2], zorder=10000,
-                    # color=('red' if abs(y_contin[-1,0]) == float(dimensions[1, 0])/2 else
-                    #        'green' if abs(y_contin[-1,2]) == float(dimensions[1, 2])/2 else
-                    #        'blue' if abs(y_contin[-1,1] - (sim.w/2 + dimensions[0, 1] + dimensions[1, 1])) < 1e-2
-                    #        else 'black')
+                    color=('black' if abs(y_contin[-1,1] - (sim.w/2 + dimensions[0, 1] + dimensions[1, 1])) < 1e-2 else
+                           'green' if abs(y_contin[-1,2]) == float(dimensions[1, 2])/2 else
+                           'blue' if abs(y_contin[-1, 0]) == float(dimensions[1, 0]) / 2
+                           else 'red')
                     )
         #print(y_contin)
 
@@ -179,32 +179,44 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
     plt.pause(1)
 
 
-
-dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]])
+# efficiency histogram and statistics for no pipe, 2x2 pipe, and 3x2 pipe scenarios:
+# dimensions = np.array([[100.0, 0.1, 100.0]])
+# median, results = efficiency_histogram(dimensions, 1.0)
+# print(f'Median: {median}')
+# print(f'Mean: {np.mean(results)}')
+# print(f'Standard Deviation: {np.std(results)}')
+#
+# dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]])
 # median, results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
 # print(f'Median: {median}')
+# print(f'Mean: {np.mean(results)}')
 # print(f'Standard Deviation: {np.std(results)}')
+#
 # dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
 # median, results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
 # print(f'Median: {median}')
+# print(f'Mean: {np.mean(results)}')
 # print(f'Standard Deviation: {np.std(results)}')
 
 #dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0]])
 #efficiency_histogram(dimensions, 1.57, 1.502)
 # absorption_histogram(10000)
 
-#print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
 
+
+# efficiency histogram and statistics for no pipe, 3x2 pipe, and 2x2 pipe scenarios:
+# dimensions = np.array([[100.0, 0.1, 100.0]])
+# heat_map(dimensions, 1.0, run=sim.run)
 # dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
 # heat_map(dimensions, 1.57, 1.502, 1.0, run=sim.run)
-# dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
-# heat_map(dimensions, 1.57, 4, 1.0, run=sim.run)
 # dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]])
-# heat_map(dimensions, 1.57, 4, 1.0, run=sim.run)
+# heat_map(dimensions, 1.57, 1.502, 1.0, run=sim.run)
 
 #gap_efficiency_scatter()
 #pipe_length_efficiency_scatter()
 
-paths_display(1.57, 1.502, 1.0, dimensions=dimensions, sample=10000)
+
+# dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]])
+# paths_display(1.57, 1.502, 1.0, dimensions=dimensions, sample=10000)
 
 plt.show()
