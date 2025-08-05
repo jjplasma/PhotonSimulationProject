@@ -134,17 +134,7 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
     sim.history = True
     print(sim.run(0, 0, dimensions, *args, n=sample))
     fig, ax = plt.subplots(figsize=(30, 5))
-    #print(sim.paths)
-    # print([len(p) for p in sim.paths])
-    # print(sim.paths[0])
-    # for ls in sim.paths:
-    #     path = np.array(ls, dtype=float)
-    #     #print(path)
-    #     for i in range(path.shape[0] - 1):
-    #         if np.isclose(path[i, 0], path[i + 1, 0]):
-    #             path[i + 1:, 1] += (path[i, 1] - path[i + 1, 1])
-    #         #print(path)
-    #         plt.plot(path[:,1], path[:,2])
+    # print(f'First TIR: {math.asin(sim.n2 / sim.n1)}\nSecond TIR: {math.asin(sim.n2 / args[1])}')
 
     for ls in sim.paths:
         path = np.array(ls, dtype=float)
@@ -157,7 +147,14 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
                 y_offset += (path[i - 1, 1] - path[i, 1])
             y_contin.append([path[i, 0], path[i, 1] + y_offset, path[i, 2]])
         y_contin = np.array(y_contin)
-        plt.plot(y_contin[:, 1], y_contin[:, 2], alpha=0.5)
+        plt.plot(y_contin[:, 1], y_contin[:, 2], alpha=0.4, lw=0.5)
+        plt.scatter(y_contin[-1, 1], y_contin[-1, 2], zorder=10000,
+                    # color=('red' if abs(y_contin[-1,0]) == float(dimensions[1, 0])/2 else
+                    #        'green' if abs(y_contin[-1,2]) == float(dimensions[1, 2])/2 else
+                    #        'blue' if abs(y_contin[-1,1] - (sim.w/2 + dimensions[0, 1] + dimensions[1, 1])) < 1e-2
+                    #        else 'black')
+                    )
+        #print(y_contin)
 
     # path = np.array(sim.paths[2])
     # for i in range(path.shape[0] - 1):
@@ -165,16 +162,16 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
     #         path[i + 1:, 1] += (path[i, 1] - path[i + 1, 1])
     # print(path)
     # plt.plot(path[:, 1], path[:, 2], label=f'Successful Paths')
-    plt.title('Path of a Detected Photon\nin Axes Normal to Electron Axis (x)')
+    plt.title('Path of a Detected Photon in Axes Normal to Electron Axis (x)')
     plt.xlabel('y')
     plt.ylabel('z')
     plt.ylim(-2, 2)
-    plt.xlim(-16.5, 73)
+    plt.xlim(-16.5, 72)
     scin = patches.Rectangle((-sim.w / 2, -sim.h / 2), sim.w, sim.h,
-                             linewidth=1, edgecolor='cyan', facecolor='cyan', label='Scintillator')
+                             linewidth=1, edgecolor='cyan', facecolor='cyan', label='Scintillator', zorder=0)
     pipe = patches.Rectangle(((sim.w / 2) + float(dimensions[0, 1]), -float(dimensions[1, 2]) / 2),
                              float(dimensions[1, 1]), float(dimensions[1, 2]),
-                             linewidth=1, edgecolor='y', facecolor='y', label='Light Pipe')
+                             linewidth=1, edgecolor='xkcd:lemon', facecolor='xkcd:lemon', label='Light Pipe', zorder=0)
     ax.add_patch(scin)
     ax.add_patch(pipe)
     plt.legend()
@@ -208,6 +205,6 @@ dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]
 #gap_efficiency_scatter()
 #pipe_length_efficiency_scatter()
 
-paths_display(1.57, 1.502, 1.0, dimensions=dimensions, sample=1000)
+paths_display(1.57, 1.502, 1.0, dimensions=dimensions, sample=10000)
 
 plt.show()

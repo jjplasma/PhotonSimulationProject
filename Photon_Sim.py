@@ -53,7 +53,7 @@ class Simulation:
         if length > 3800 or rec > 900: # (attenuation length: 380 cm)
             #print(f'Absorbed in {rec}')
             #print(length)
-            return [False, length, False]
+            return [False, length, Ro, False]
 
         dims = [self.l, self.w, self.h]
         window = [self.lp, self.wp, self.hp]  # allows easier iterating across dimensions
@@ -85,7 +85,7 @@ class Simulation:
                     if theta_i > self.theta_detect:
                         # Immediately returns false because a TIR bounce on the necessary passage geometrically
                         # disallows a photon from ever crossing this threshold for rectangular geometry
-                        return [False, length, False]
+                        return [False, length, R, False]
                     theta_t = math.asin((self.n1 / self.n3) * math.sin(theta_i))  # transmission angle
                     r_perp = (self.n1 * math.cos(theta_i) - self.n3 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n3 * math.cos(theta_t))
                     r_para = (self.n1 * math.cos(theta_t) - self.n3 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n3 * math.cos(theta_i))  # Fresnel's equations
@@ -130,7 +130,7 @@ class Simulation:
 
                 if theta_i > self.theta_critical: # avoids extra computation for case of TIR
 
-                    # print('TIR bounce')
+                    # print(f'TIR bounce at {theta_i}')
                     V[i] *= -1
                     return self.ray_trace(V, R, rec+1, length)
                 else:
@@ -144,10 +144,10 @@ class Simulation:
 
                     if select_path <= Reflectance:
                         V[i] *= -1
-                        # print('bounce')
+                        # print(f'bounce at {theta_i}')
                         return self.ray_trace(V, R, rec + 1, length)
                     # print('escape')
-                    return [False, length, False]
+                    return [False, length, R, False]
 
         raise Exception(f'Photon tunneled out of sim, look for bugs \n R: {Ro} \n V: {V}, \n Dims: {dims}')
 
@@ -276,12 +276,12 @@ class Simulation:
                         #print(Ro)
                         #print(Vo)
                 else:
-                    # if self.history and j==2 and length < 3800:
-                    #     print(length)
-                    #     self.paths.append(np.copy(self.positions))
-                    #     return 'Found path'
+                    # if self.history and j == 2 and length < 3800:
+                    #     self.positions.append(np.copy(detection[2]))
+                    #     self.paths.append([np.copy(pos) for pos in self.positions])
                     break
                 j += 1
+            #print(f'R: {Ro}\nV: {Vo}')
 
         # reset all instance values so run method can be reused
         self.l, self.w, self.h = dims[0, 0], dims[0, 1], dims[0, 2]
