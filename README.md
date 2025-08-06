@@ -5,5 +5,5 @@ attenuation for each photon.
 Version notes:
 
     Can only be run through a python interpreter.
-    Current version is not vectorized
-    Typical instance of 1000 Photons takes about 0.26 seconds
+    Current version is not vectorized.
+    Typical instance of 1000 Photons takes about 0.26 seconds.

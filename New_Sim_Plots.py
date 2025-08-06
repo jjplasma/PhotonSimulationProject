@@ -8,6 +8,9 @@ import random
 sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
 def random_efficiency_histogram(n=1000):
+    # Creates detection rate histogram for photons randomly generated inside the scintillator
+    # Currently no support for light pipe or airgap case
+
     results = np.zeros(n)
     for i in range (n):
         results[i] = sim.random_test()[0]
@@ -21,6 +24,14 @@ def random_efficiency_histogram(n=1000):
     plt.show()
 
 def efficiency_histogram(*args, n=1000, plot=True):
+    # Creates detection rate histogram for n=1000 photons generated along a random electron intersection path
+    # inside the scintillator, allowing for modular addition of light pipes and other mediums
+    # Args = (2d array: dimensions of every intermediate medium between the scintillator and detector
+    #                   shape = (number of mediums, 3 (dimensions l, w, h))
+    #         n floats: index of refraction for each intermediate medium)
+    # Returns = (float: median of results
+    #            array: detection rates)
+
     results = np.zeros(n)
     y = np.random.uniform(-1.0, 1.0, n) * sim.w / 2
     z = np.random.uniform(-1.0, 1.0, n) * sim.h / 2
@@ -41,6 +52,10 @@ def efficiency_histogram(*args, n=1000, plot=True):
     return median, results
 
 def gap_efficiency_scatter(point=101):
+    # Scatterplot of detection rate by length of the airgap between the light and the SiPM window
+    # Point number of points are from 0 to 1 mm and one tenth of that are from 1 to 2 mm
+    # Best fit is currently linear, though that is visibly not the best model
+
     ds = np.concatenate((np.linspace(0, 1, point), np.linspace(1.1, 2, point // 10)))
     eff = np.zeros_like(ds)
     err = np.zeros_like(ds)
@@ -61,6 +76,10 @@ def gap_efficiency_scatter(point=101):
     plt.pause(1)
 
 def pipe_length_efficiency_scatter(point=101):
+    # Scatterplot of detection rate by length of the light pipe
+    # Point number of points are from 50 to 60 mm
+    # Best fit is currently linear, though that is likely not the best model
+
     ds = np.linspace(50, 60, point)
     eff = np.zeros_like(ds)
     err = np.zeros_like(ds)
@@ -81,6 +100,9 @@ def pipe_length_efficiency_scatter(point=101):
     plt.pause(1)
 
 def absorption_histogram(n=1000):
+    # Creates histograms of the length travelled by a photon and recursive depth before it escapes,
+    # attenuates, or is detected.
+
     sim.iterations = n
     _, hits, misses = sim.random_test()
     hits = np.array(hits)
@@ -111,7 +133,13 @@ def absorption_histogram(n=1000):
     # plt.yscale('log')
     # plt.show()
 
-def heat_map(*args, run=sim.input_test):
+def heat_map(*args, run=sim.run):
+    # Heatmap of detection from photons generated along an electron beams intersection line with
+    # the scintillator at different points
+    # Args = (2d array: dimensions of every intermediate medium between the scintillator and detector
+    #                   shape = (number of mediums, 3 (dimensions l, w, h))
+    #         n floats: index of refraction for each intermediate medium)
+
     y = np.linspace(-sim.w / 2, sim.w / 2, 100)
     z = np.linspace(-sim.h / 2, sim.h / 2, 10)
     heat = np.zeros((z.size, y.size))
@@ -130,7 +158,12 @@ def heat_map(*args, run=sim.input_test):
     plt.show(block=False)
     plt.pause(.1)
 
-def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])):
+def paths_display(*args, sample=100,
+                  dimensions=np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])):
+    # Displays all paths and end points of photons generated from an intersection with the center of the scintillator
+    # Currently, changing which cases are displayed requires manual tweaking in the run method
+    # Args = (n floats: index of refraction for each intermediate medium)
+
     sim.history = True
     print(sim.run(0, 0, dimensions, *args, n=sample))
     fig, ax = plt.subplots(figsize=(30, 5))
@@ -179,7 +212,7 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
     plt.pause(1)
 
 
-# efficiency histogram and statistics for no pipe, 2x2 pipe, and 3x2 pipe scenarios:
+# Efficiency histogram and statistics for no pipe, 2x2 pipe, and 3x2 pipe scenarios:
 # dimensions = np.array([[100.0, 0.1, 100.0]])
 # median, results = efficiency_histogram(dimensions, 1.0)
 # print(f'Median: {median}')
@@ -204,7 +237,7 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
 
 
 
-# efficiency histogram and statistics for no pipe, 3x2 pipe, and 2x2 pipe scenarios:
+# Heat map for no pipe, 3x2 pipe, and 2x2 pipe scenarios:
 # dimensions = np.array([[100.0, 0.1, 100.0]])
 # heat_map(dimensions, 1.0, run=sim.run)
 # dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
@@ -215,7 +248,7 @@ def paths_display(*args, sample=100, dimensions=np.array([[2.0, 0.125, 3.0], [2.
 #gap_efficiency_scatter()
 #pipe_length_efficiency_scatter()
 
-
+#Displays all paths for a 2x2 light pipe
 # dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]])
 # paths_display(1.57, 1.502, 1.0, dimensions=dimensions, sample=10000)
 

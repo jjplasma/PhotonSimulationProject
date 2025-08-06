@@ -45,7 +45,7 @@ class Simulation:
         # must pass through multiple objects
         # Returns: [boolean: true if photon passes desired window,
         #           float: length photon traveled,
-        #           array of floats(if passes): position of passage,
+        #           array of floats: position of passage or escape,
         #           array of floats(if passes): exit velocity vector,
         #           boolean: true if backflows to previous stage]
         # Detector = 2 (or 3) are correct for the current dimensionality inputs
@@ -205,10 +205,10 @@ class Simulation:
 
     def run(self, y, z, dimensions, *args, n=None):
 
-        # Generates self.iterations number of photons with random positions on an input line and random velocities
-        # within the scintillator.
-        # Takes coordinates, n by 3 list of dimensions for the intermediate portions, and n arguments for the intermediate indices of
-        # refraction and returns the fraction that are detected.
+        # Generates self.iterations number of photons with random positions on an input electron intersection line and
+        # random velocities within the scintillator.
+        # Takes coordinates, 2d array of dimensions (n by 3) for the intermediate positions, and n arguments for the
+        # intermediate indices of refraction and returns the fraction that are detected.
         # Assumes detector == 2 or 3
 
         if n is None:
@@ -226,8 +226,8 @@ class Simulation:
             j = 0 # tracks which stage the photon is in
             length = 0
             self.theta_back = math.pi / 2
-            while j < len(r_indices) - 1:
-                #print(j)
+            while j < len(r_indices) - 1: #while loops allows the photon to move both forward and backwards
+                # through the mediums
 
                 # iterating through index of refraction
                 self.n1 = r_indices[j]
@@ -254,7 +254,7 @@ class Simulation:
                 self.lp, self.wp, self.hp = dims[j + 1, 0], dims[j + 1, 1], dims[j + 1, 2]
 
                 detection = self.ray_trace(Vo, Ro, length=length)
-                if detection[0] or detection[-1]:
+                if detection[0] or detection[-1]: #handles all cases where the photon remains in the simulation or is detected
                     length = detection[1]
                     if self.history:
                         self.positions.append(np.copy(detection[2]))
@@ -295,30 +295,33 @@ class Simulation:
 
 
 
-
-#sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
-sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
-
-
-
-# V = np.array([0, 1, 2])
-# Ro = np.array([0, 0, 0])
-# print(sim.theta_critical)
-# if sim.ray_trace(V, Ro):
-#     print('Detected')
-# else:
-#     print('Lost')
-
-#print(f'Detected {sim.random_test()[0] * 100}%')
-#print(f'Detected {sim.input_test(0, 0) * 100}%')
-
-# sim.history = True
-dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
-print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+def main():
+    #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
+    sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
 
-import timeit
 
-timer = timeit.Timer(lambda: sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
-elapsed = timer.timeit(100)
-print(f'Time taken: {elapsed:.6f} seconds')
+    # V = np.array([0, 1, 2])
+    # Ro = np.array([0, 0, 0])
+    # print(sim.theta_critical)
+    # if sim.ray_trace(V, Ro):
+    #     print('Detected')
+    # else:
+    #     print('Lost')
+
+    #print(f'Detected {sim.random_test()[0] * 100}%')
+    #print(f'Detected {sim.input_test(0, 0) * 100}%')
+
+    # sim.history = True
+    dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+    print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+
+
+    # import timeit
+    #
+    # timer = timeit.Timer(lambda: sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+    # elapsed = timer.timeit(100)
+    # print(f'Time taken: {elapsed:.6f} seconds')
+
+if __name__=="__main__":
+    main()
