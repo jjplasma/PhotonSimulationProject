@@ -1,3 +1,9 @@
-This simulation adjusts the previous simulation of a photon in a scintillator to include a light pipe where the photon cannot originate that it must pass through before hitting the detector.
+This simulation has a starting region (scintillator) where photons can randomly generate from an electron intersection 
+line and n regions. Through ray tracing, it simulates the photons movement resulting in either detection, escape, or 
+attenuation for each photon.
 
-Still in progress
+Version notes:
+
+    Can only be run through a python interpreter.
+    Current version is not vectorized.
+    Typical instance of 1000 Photons takes about 0.26 seconds.

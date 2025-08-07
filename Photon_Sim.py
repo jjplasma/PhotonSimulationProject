@@ -5,7 +5,8 @@ import random
 class Simulation:
 
     def __init__(self, l, w, h, lp, wp, hp, n1, n2, n3, phi_line=math.pi/4,
-                 theta_line=math.pi/4, detector=3, air_gap=False, Xoy=0, Xoz=0, iterations=1000, nplastic=1.502):
+                 theta_line=math.pi/4, detector=3, air_gap=False, Xoy=0, Xoz=0, iterations=1000, nplastic=1.502,
+                 history=False):
         self.l = l # scintillator length: x 2?
         self.w = w # scintillator width: y 30?
         self.h = h # scintillator height: z 3?
@@ -31,6 +32,9 @@ class Simulation:
         self.back = False # allows or disallows backflow
         self.theta_back = math.pi / 2
         self.lwhb = [0, 0, 0] # backflow window length, width, and height
+        self.history = history
+        self.positions = []
+        self.paths = []
 
     def ray_trace(self, V, Ro, rec=0, length=0):
 
@@ -41,18 +45,21 @@ class Simulation:
         # must pass through multiple objects
         # Returns: [boolean: true if photon passes desired window,
         #           float: length photon traveled,
-        #           array of floats(if passes): position of passage,
+        #           array of floats: position of passage or escape,
         #           array of floats(if passes): exit velocity vector,
         #           boolean: true if backflows to previous stage]
         # Detector = 2 (or 3) are correct for the current dimensionality inputs
 
-        if length > 3800 or rec > 900: # !rewrite later to take attenuation length into account (attenuation length: 380 cm)
+        if length > 3800 or rec > 900: # (attenuation length: 380 cm)
             #print(f'Absorbed in {rec}')
             #print(length)
-            return [False, length, False]
+            return [False, length, Ro, False]
 
         dims = [self.l, self.w, self.h]
         window = [self.lp, self.wp, self.hp]  # allows easier iterating across dimensions
+
+        if self.history:
+            self.positions.append(Ro)
 
         for i in range(3): # checks each wall of the scintillator until it finds the one that the photon will hit
             # i equalling 0 in this loop makes this section check the x component of V, and so on.
@@ -64,6 +71,7 @@ class Simulation:
             t = (R[i] - Ro[i]) / V[i]
             R[(i+1) % 3] = Ro[(i+1) % 3] + V[(i+1) % 3] * t
             R[(i+2) % 3] = Ro[(i+2) % 3] + V[(i+2) % 3] * t
+            #print(R)
             #finds the coordinates where the photon hits the plane of each of the scintillators walls
 
             if (np.abs(R[i]) <= dims[i]/2) and (np.abs(R[(i+1) % 3]) <= dims[(i+1) % 3]/2) and (np.abs(R[(i+2) % 3]) <= dims[(i+2) % 3]/2): # checks to see if the new point is within the boundaries of the box
@@ -77,7 +85,7 @@ class Simulation:
                     if theta_i > self.theta_detect:
                         # Immediately returns false because a TIR bounce on the necessary passage geometrically
                         # disallows a photon from ever crossing this threshold for rectangular geometry
-                        return [False, length, False]
+                        return [False, length, R, False]
                     theta_t = math.asin((self.n1 / self.n3) * math.sin(theta_i))  # transmission angle
                     r_perp = (self.n1 * math.cos(theta_i) - self.n3 * math.cos(theta_t)) / (self.n1 * math.cos(theta_i) + self.n3 * math.cos(theta_t))
                     r_para = (self.n1 * math.cos(theta_t) - self.n3 * math.cos(theta_i)) / (self.n1 * math.cos(theta_t) + self.n3 * math.cos(theta_i))  # Fresnel's equations
@@ -122,7 +130,7 @@ class Simulation:
 
                 if theta_i > self.theta_critical: # avoids extra computation for case of TIR
 
-                    # print('TIR bounce')
+                    # print(f'TIR bounce at {theta_i}')
                     V[i] *= -1
                     return self.ray_trace(V, R, rec+1, length)
                 else:
@@ -136,10 +144,10 @@ class Simulation:
 
                     if select_path <= Reflectance:
                         V[i] *= -1
-                        # print('bounce')
+                        # print(f'bounce at {theta_i}')
                         return self.ray_trace(V, R, rec + 1, length)
                     # print('escape')
-                    return [False, length, False]
+                    return [False, length, R, False]
 
         raise Exception(f'Photon tunneled out of sim, look for bugs \n R: {Ro} \n V: {V}, \n Dims: {dims}')
 
@@ -197,10 +205,10 @@ class Simulation:
 
     def run(self, y, z, dimensions, *args, n=None):
 
-        # Generates self.iterations number of photons with random positions on an input line and random velocities
-        # within the scintillator.
-        # Takes coordinates, dimensions for the intermediate portions, and arguments for the intermediate indices of
-        # refraction and returns the fraction that are detected.
+        # Generates self.iterations number of photons with random positions on an input electron intersection line and
+        # random velocities within the scintillator.
+        # Takes coordinates, 2d array of dimensions (n by 3) for the intermediate positions, and n arguments for the
+        # intermediate indices of refraction and returns the fraction that are detected.
         # Assumes detector == 2 or 3
 
         if n is None:
@@ -213,11 +221,14 @@ class Simulation:
         for i in range(n):
             Ro = np.array([np.random.uniform(low=-1.0, high=1.0) * dims[0, 0] / 2, y, z])
             Vo = self.random_three_vector()[0]
+            if self.history:
+                self.positions = []
             j = 0 # tracks which stage the photon is in
             length = 0
             self.theta_back = math.pi / 2
-            while j < len(r_indices) - 1:
-                #print(j)
+            while j < len(r_indices) - 1: #while loops allows the photon to move both forward and backwards
+                # through the mediums
+
                 # iterating through index of refraction
                 self.n1 = r_indices[j]
                 self.n3 = r_indices[j + 1]
@@ -243,8 +254,10 @@ class Simulation:
                 self.lp, self.wp, self.hp = dims[j + 1, 0], dims[j + 1, 1], dims[j + 1, 2]
 
                 detection = self.ray_trace(Vo, Ro, length=length)
-                if detection[0] or detection[-1]:
-                    length += detection[1]
+                if detection[0] or detection[-1]: #handles all cases where the photon remains in the simulation or is detected
+                    length = detection[1]
+                    if self.history:
+                        self.positions.append(np.copy(detection[2]))
                     if detection[-1]: # backflow condition
                         j -= 2
                         Ro, Vo = detection[2], detection[3]
@@ -254,6 +267,8 @@ class Simulation:
                         # print(Vo)
                     elif j == len(r_indices) - 2: # detection condition
                         count += 1
+                        if self.history:
+                            self.paths.append([np.copy(pos) for pos in self.positions])
                     else: # passage to next stage condition
                         #print(detection[2:4])
                         Ro, Vo = detection[2], detection[3]
@@ -261,8 +276,12 @@ class Simulation:
                         #print(Ro)
                         #print(Vo)
                 else:
+                    if self.history and length < 3800:
+                        self.positions.append(np.copy(detection[2]))
+                        self.paths.append([np.copy(pos) for pos in self.positions])
                     break
                 j += 1
+            #print(f'R: {Ro}\nV: {Vo}')
 
         # reset all instance values so run method can be reused
         self.l, self.w, self.h = dims[0, 0], dims[0, 1], dims[0, 2]
@@ -271,31 +290,38 @@ class Simulation:
         self.n3 = r_indices[-1]
         self.theta_critical = (math.asin(self.n2 / self.n1))
         self.back = False
+        #print(dims)
         return count / n
 
 
 
-
-#sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
-sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
-
-#sim.run()
-#print(f'Efficiency: {sim.efficiency}%')
-#sim.new_line()
-#print(f'Path length: {sim.length}')
-#print(f'Path length new: {sim.path_length()}') # currently unrelated to previous run
-
-# V = np.array([0, 1, 2])
-# Ro = np.array([0, 0, 0])
-# print(sim.theta_critical)
-# if sim.ray_trace(V, Ro):
-#     print('Detected')
-# else:
-#     print('Lost')
-
-#print(f'Detected {sim.random_test()[0] * 100}%')
-#print(f'Detected {sim.input_test(0, 0) * 100}%')
+def main():
+    #sim = Simulation(l, w, h, lp, wp, hp, n1, n2, phi_line, theta_line)
+    sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
 
-dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
-print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+
+    # V = np.array([0, 1, 2])
+    # Ro = np.array([0, 0, 0])
+    # print(sim.theta_critical)
+    # if sim.ray_trace(V, Ro):
+    #     print('Detected')
+    # else:
+    #     print('Lost')
+
+    #print(f'Detected {sim.random_test()[0] * 100}%')
+    #print(f'Detected {sim.input_test(0, 0) * 100}%')
+
+    # sim.history = True
+    dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+    print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+
+
+    # import timeit
+    #
+    # timer = timeit.Timer(lambda: sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
+    # elapsed = timer.timeit(100)
+    # print(f'Time taken: {elapsed:.6f} seconds')
+
+if __name__=="__main__":
+    main()
