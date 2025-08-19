@@ -151,7 +151,8 @@ class Simulation:
 
         raise Exception(f'Photon tunneled out of sim, look for bugs \n R: {Ro} \n V: {V}, \n Dims: {dims}')
 
-    def random_three_vector(self):
+    @staticmethod
+    def random_three_vector():
         # written by Majd Ghrear in a previous project to isotropically generate direction vectors
         phi = np.random.uniform() * 2 * np.pi
 
@@ -178,11 +179,8 @@ class Simulation:
             Vo = self.random_three_vector()[0]
             detection = self.ray_trace(Vo, Ro)
             if detection[0]:
-                if plastic:
-                    Ro = detection[1]
-                else:
-                    hits.append(detection[1:2])
-                    count += 1
+                hits.append(detection[1:2])
+                count += 1
             else:
                 misses.append(detection[1:2])
         return count / self.iterations, np.array(hits), np.array(misses)
@@ -300,7 +298,6 @@ def main():
     sim = Simulation(2.0, 30.0, 3.0, 2.0, 30.0, 2.0, 1.58, 1.0, 1.55, detector=2)
 
 
-
     # V = np.array([0, 1, 2])
     # Ro = np.array([0, 0, 0])
     # print(sim.theta_critical)
@@ -323,5 +320,5 @@ def main():
     # elapsed = timer.timeit(100)
     # print(f'Time taken: {elapsed:.6f} seconds')
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

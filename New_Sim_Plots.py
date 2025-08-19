@@ -23,7 +23,7 @@ def random_efficiency_histogram(n=1000):
     print(f'Mean: {np.mean(results)}')
     plt.show()
 
-def efficiency_histogram(*args, n=1000, plot=True):
+def efficiency_histogram(*args, n=1000, plot=True, beam=0.5):
     # Creates detection rate histogram for n=1000 photons generated along a random electron intersection path
     # inside the scintillator, allowing for modular addition of light pipes and other mediums
     # Args = (2d array: dimensions of every intermediate medium between the scintillator and detector
@@ -33,10 +33,16 @@ def efficiency_histogram(*args, n=1000, plot=True):
     #            array: detection rates)
 
     results = np.zeros(n)
-    y = np.random.uniform(-1.0, 1.0, n) * sim.w / 2
+    y = np.random.normal(0.0, sim.w * beam, n)
     z = np.random.uniform(-1.0, 1.0, n) * sim.h / 2
+    # y = np.zeros_like(y)
+    # z = np.zeros_like(z)
     for i in range (n):
-        results[i] = sim.run(y[i], z[i], *args)
+        try:
+            assert np.abs(y[i]) <= sim.w / 2
+            results[i] = sim.run(y[i], z[i], *args)
+        except AssertionError:
+            pass
         print(i)
     median = np.median(results)
     #print(f'Median: {median}')
@@ -94,6 +100,51 @@ def pipe_length_efficiency_scatter(point=101):
     plt.plot(ds, (m * ds) + b, label=f'Best Fit: \n Slope: {m:.2f} \n Intercept: {b:.2f}')
     plt.title('Rate of Detection by Light Pipe Length')
     plt.xlabel('Light Pipe Length (mm)')
+    plt.ylabel('Rate of Photon Detection')
+    plt.legend()
+    plt.show(block=False)
+    plt.pause(1)
+
+def beam_width_efficiency_scatter(point=31):
+    # Scatterplot of detection rate by beam width
+    # Point number of points are from 50 to 60 mm
+    # Best fit is currently linear, though that is likely not the best model
+
+    ds = np.linspace(.1, 1, point)
+    eff = np.zeros_like(ds)
+    err = np.zeros_like(ds)
+    eff_no_pipe = np.zeros_like(ds)
+    err_no_pipe = np.zeros_like(ds)
+    eff3 = np.zeros_like(ds)
+    err3 = np.zeros_like(ds)
+    for i in range(len(ds)):
+        dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 36.24, 2.0], [100.0, 0.1, 100.0]])
+        eff[i], results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0, plot=False, beam=float(ds[i]))
+        err[i] = np.std(results)
+
+        dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 36.24, 3.0], [100.0, 0.1, 100.0]])
+        eff3[i], results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0, plot=False, beam=float(ds[i]))
+        err3[i] = np.std(results)
+
+        dimensions = np.array([[2, 36.365, 3], [100.0, 0.1, 100.0]])
+        eff_no_pipe[i], results = efficiency_histogram(dimensions, 1.58, 1.0, plot=False, beam=float(ds[i]))
+        err_no_pipe[i] = np.std(results)
+        print(f'{round(100 * i / point, 1)}%')
+    fig = plt.figure()
+    b, m = np.polynomial.polynomial.Polynomial.fit(ds, eff, 1).convert().coef
+    plt.errorbar(ds, eff, yerr=err, fmt='o', ls='', elinewidth=.5, color="r")
+    plt.plot(ds, (m * ds) + b, label=f'2x2 Pipe: \n Slope: {m:.2f} \n Intercept: {b:.2f}', color="r")
+
+    b3, m3 = np.polynomial.polynomial.Polynomial.fit(ds, eff3, 1).convert().coef
+    plt.errorbar(ds, eff3, yerr=err3, fmt='o', ls='', elinewidth=.5, color="g")
+    plt.plot(ds, (m3 * ds) + b3, label=f'3x2 Pipe: \n Slope: {m3:.2f} \n Intercept: {b3:.2f}', color="g")
+
+    bn, mn = np.polynomial.polynomial.Polynomial.fit(ds, eff_no_pipe, 1).convert().coef
+    plt.errorbar(ds, eff_no_pipe, yerr=err_no_pipe, fmt='o', ls='', elinewidth=.5, color="b")
+    plt.plot(ds, (mn * ds) + bn, label=f'No Pipe: \n Slope: {mn:.2f} \n Intercept: {bn:.2f}', color="b")
+
+    plt.title('Rate of Detection by Beam Width')
+    plt.xlabel('Beam width (1 sigma) as a fraction of scintillator length (30 mm)')
     plt.ylabel('Rate of Photon Detection')
     plt.legend()
     plt.show(block=False)
@@ -225,7 +276,13 @@ def paths_display(*args, sample=100,
 # print(f'Mean: {np.mean(results)}')
 # print(f'Standard Deviation: {np.std(results)}')
 #
-# dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+# dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 36.24, 2.0], [100.0, 0.1, 100.0]])
+# median, results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
+# print(f'Median: {median}')
+# print(f'Mean: {np.mean(results)}')
+# print(f'Standard Deviation: {np.std(results)}')
+#
+# dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 36.24, 3.0], [100.0, 0.1, 100.0]])
 # median, results = efficiency_histogram(dimensions, 1.57, 1.502, 1.0)
 # print(f'Median: {median}')
 # print(f'Mean: {np.mean(results)}')
@@ -247,9 +304,13 @@ def paths_display(*args, sample=100,
 
 #gap_efficiency_scatter()
 #pipe_length_efficiency_scatter()
+beam_width_efficiency_scatter()
 
 #Displays all paths for a 2x2 light pipe
 # dimensions = np.array([[2.0, 0.125, 2.0], [2.0, 54.86, 2.0], [100.0, 0.1, 100.0]])
 # paths_display(1.57, 1.502, 1.0, dimensions=dimensions, sample=10000)
+#Displays all paths for no light pipe
+# dimensions = np.array([[100.0, 0.1, 100.0]])
+# paths_display(1.0, dimensions=dimensions, sample=10000)
 
 plt.show()
