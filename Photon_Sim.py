@@ -33,6 +33,7 @@ class Simulation:
         self.theta_back = math.pi / 2
         self.lwhb = [0, 0, 0] # backflow window length, width, and height
         self.history = history
+        self.allhist = True
         self.positions = []
         self.paths = []
 
@@ -274,7 +275,7 @@ class Simulation:
                         #print(Ro)
                         #print(Vo)
                 else:
-                    if self.history and length < 3800:
+                    if self.history and length < 3800 and self.allhist:
                         self.positions.append(np.copy(detection[2]))
                         self.paths.append([np.copy(pos) for pos in self.positions])
                     break
@@ -310,7 +311,7 @@ def main():
     #print(f'Detected {sim.input_test(0, 0) * 100}%')
 
     # sim.history = True
-    dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 54.86, 3.0], [100.0, 0.1, 100.0]])
+    dimensions = np.array([[2.0, 0.125, 3.0], [2.0, 36.24, 3.0], [100.0, 0.1, 100.0]])
     print(sim.run(0, 0, dimensions, 1.57, 1.502, 1.0))
 
 
